@@ -3,39 +3,39 @@
 ![](../../../../~gitbook/image.md)Publicado: 09 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 NetMon es una máquina de dificultad Easy de HackTheBox que ejecuta Windows Server. La máquina presenta un servicio FTP con acceso anónimo habilitado que permite acceder al sistema de archivos completo, facilitando la obtención de la flag de usuario. Para la escalada de privilegios, se explota una vulnerabilidad de ejecución remota de comandos autenticada en PRTG Network Monitor 18.1.37.13946, lo que permite crear un usuario administrador y obtener acceso completo al sistema.La máquina enseña conceptos importantes como la enumeración de servicios FTP, análisis de archivos de configuración, password guessing basado en patrones, y explotación de aplicaciones web empresariales.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####Escaneo de puertos TCP
+#### Escaneo de puertos TCP
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🚪 Enumeración de Servicios
+### 🚪 Enumeración de Servicios
 
-####🗂️ 21 FTP
+#### 🗂️ 21 FTP
 La enumeración con nmap nos muestra que la autenticación anónima está habilitada en el servicio FTP.Para poder enumerar de una manera mas comoda los archivos mediante `ftp`, vamos a crearnos una montura con la herramienta `curlftpfs`.![](../../../../~gitbook/image.md)Encontramos y descargamos la primera flag del directorio Desktop del perfil del usuario Public:![](../../../../~gitbook/image.md)
-####🌐 445 SMB
+#### 🌐 445 SMB
 Dado que no tenemos credenciales, intentamos enumerar información mediante sesión anónima pero no parece estar habilitada. No hay mucho que rascar aquí.
-####🌍 80 HTTP ( PRTG Network Monitor 18.1.37.13946 )
+#### 🌍 80 HTTP ( PRTG Network Monitor 18.1.37.13946 )
 Accedemos a http://10.10.10.152/ y encontramos un servicio llamado PRTG Network Monitor![](../../../../~gitbook/image.md)PRTG Network Monitor ==es un software de monitorización de redes que permite supervisar el rendimiento y la disponibilidad de la infraestructura de TI==. Esta herramienta de [Paessler](https://www.paessler.com/es/network_monitoring_tool) es utilizada para monitorizar dispositivos como servidores, routers, switches, aplicaciones y servicios, así como métricas como la salud, la disponibilidad, el tráfico y el ancho de bandaBuscando información pública encontramos que las credenciales por defecto de esta aplicación son:- Username: `prtgadmin`
 - Password: `prtgadmin`
 Pero no parecen funcionar en esta ocasión.
-####Fuzzing de directorios
+#### Fuzzing de directorios
 Realizamos fuzzing de directorios contra el puerto 80 pero en este caso no encontramos nada.
-####🔍 Análisis de Configuración
+#### 🔍 Análisis de Configuración
 Aprovechando que tenemos acceso a la máquina a través de la sesión anónima FTP. Buscamos información sobre el servicio PRTG Network Monitor y posibles rutas de interés donde guarda archivos de configuración:https://kb.paessler.com/en/topic/463-how-and-where-does-prtg-store-its-data![](../../../../~gitbook/image.md)
-####🔐 Obtención de Credenciales
+#### 🔐 Obtención de Credenciales
 Es bastante contenido, por lo que podemos descargarlo a nuestro host de ataque y analizarlo detenidamente:Podemos intentar jugar con grep y algunas expresiones para filtrar por cadenas como "password"![](../../../../~gitbook/image.md)Los siguientes archivos parecen contener la palabra "password". Encontramos unas credenciales en el archivo PRTG Configuration.old.bak![](../../../../~gitbook/image.md)Probamos estas credenciales en el servicio pero no funcionan:![](../../../../~gitbook/image.md)Podemos tratar de hacer "guessing" y dado que el final de la contraseña coincide con el año, podemos ir probando otros años para ver si tenemos suerte:Y logramos acceder al aplicativo y además enumeramos la versión![](../../../../~gitbook/image.md)
-####💥 Explotación
+#### 💥 Explotación
 Buscamos exploits públicos y encontramos uno que nos permite explotar una ejecución remota de comandos autenticada.![](../../../../~gitbook/image.md)
-####Método 1 - Usando Exploit público
+#### Método 1 - Usando Exploit público
 Dado que ahora tenemos credenciales, usaremos este exploit.![](../../../../~gitbook/image.md)El script nos pide indicar la url del servicio y una cookie para llevar a acabo la explotación logrando así crear un usuario en el grupo de administradores llamado pentest cuya contraseña será P3nT3st!Una vez autenticados en Network Monitor podemos usar por ejemplo la extensión Cookie Editor para copiar la cookie en formato Header String:![](../../../../~gitbook/image.md)De tal forma que el comando para ejecutar el exploit nos quedaría así:![](../../../../~gitbook/image.md)
-####Método 2 - Explotación Manual
+#### Método 2 - Explotación Manual
 Navegamos a siguiente opción: Setup -> Accounts Settings -> Notifications![](../../../../~gitbook/image.md)Hacemos scroll hasta abajo y habilitamos la opción Execute Program y especificamos el siguiente payload para la inyección:![](../../../../~gitbook/image.md)Una vez guardada la notificación. Volvemos atrás a la lista de notificaciones, seleccionamos la nuestra y hacemos click en el botón de la campana:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🏆 Post-Explotación
+#### 🏆 Post-Explotación
 Esperamos unos segundos y ahora ya deberemos confirmar que ha ido bien probando la nueva cuenta de administrador con el servicio SMB:![](../../../../~gitbook/image.md)Usamos impacket para ganar acceso a la máquina con la nueva cuenta que hemos creado y obtenemos la flag:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🚪 Enumeración de Servicios](#enumeracion-de-servicios-1)

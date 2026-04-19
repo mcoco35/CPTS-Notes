@@ -3,19 +3,19 @@
 ![](../../../../~gitbook/image.md)Publicado: 26 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Popcorn es una máquina Linux de dificultad media de HackTheBox que presenta una aplicación web vulnerable llamada "Torrent Hoster". La explotación inicial se logra mediante la subida de archivos maliciosos aprovechando una validación débil del tipo MIME en la funcionalidad de actualización de capturas de pantalla de torrents. Una vez obtenido el acceso inicial, la escalada de privilegios se realiza explotando la vulnerabilidad DirtyCow (CVE-2016-5195) presente en el kernel Linux 2.6.31, permitiendo modificar el archivo `/etc/passwd` para crear un usuario con privilegios de root.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 Al acceder a http://popcorn.htb encontramos únicamente el siguiente mensaje:🕷️Fuzzing de directoriosAl realizar fuzzing de directorios con ferxobuster y dirsearch encontramos algunos recursos que podrían ser interesante analizar:Los siguientes recursos muestran al acceder el contenido del fichero info.php de la aplicación.http://popcorn.htb/test
 http://popcorn.htb/test/version_tmp
 http://popcorn.htb/test/test.php
@@ -23,16 +23,16 @@ http://popcorn.htb/test/tmp/
 http://popcorn.htb/test/reports![](../../../../~gitbook/image.md)El siguiente recurso corresponde a una web donde se aloja un servicio para la subida de archivos de torrent. Además tiene una opción para el registro de usuarios, la cual utilizamos.http://popcorn.htb/torrent/![](../../../../~gitbook/image.md)Al acceder al siguiente recurso obtenemos el siguiente error:
 http://popcorn.htb/torrent/admin/http://popcorn.htb/torrent/database/th_database.sql
 Aquí encontramos nada menos que un dump de la base de datos:Al final de archivo, encontramos lo que parece ser el hash en MD5 de una cuenta de administrador. Usamos hashcat y el diccionario rockyou y logramos obtener la contraseña:
-###💻 Explotación
+### 💻 Explotación
 Buscando información sobre el servicio Torrent Hoster descubrimos que ha habido ciertas vulnerabilidades para este servicio:[Unauthenticated RCE ]https://raw.githubusercontent.com/Anon-Exploiter/exploits/refs/heads/master/torrent_hoster_unauthenticated_rce.pyComo ya nos habíamos registrado con una cuenta en la aplicación, decidimos acceder a
 popcorn.htb/torrents.php?mode=upload y verificar si el módulo de subida de archivos es vulnerable. Después de algún tiempo tratando de hacer que el exploit funcionara, lo descarté como un posible rabbit hole.Sin embargo, el exploit menciona que la funcionalidad que permita la subida de una screenshot para la imagen del torrent es vulnerable, para ello, debemos subir una imagen de torrent legítima y una vez subida, vamos a Browse y hacemos click en editar este torrent y se abrirá una nueva ventana la cual nos permitirá seleccionar la opción Update Screenshot![](../../../../~gitbook/image.md)En este punto, iniciamos Burpsuite para inceptar la petición y poder subir una webshell en php que nos permita explotar nuestro RCE.Una vez interceptada la petición de la subida de nuestra php webshell, modificamos el content-type por una de las permitidas:![](../../../../~gitbook/image.md)Reemplazamos el MIME type application/x-php por image/gif y deberemos recibir un mensaje de que la shell se ha subido correctamente:Ahora iniciamos nuestro listener con netcat y podemos obtener la url del archivo situándonos sobre el icono de la imagen y copiando la URL:http://popcorn.htb/torrent/upload/3c87fab96998fc4da551128ee6215060b756c178.phpY obtendremos la RCE:
-####Mejora del tratamiento de la TTY
+#### Mejora del tratamiento de la TTY
 
-####Initial Foothold
+#### Initial Foothold
 Enumeramos los usuarios de la máquina y encontramos un usuario llamado `george` en cuyo directorio está la primera flag:
-####🗝️ Escalada de privilegios
+#### 🗝️ Escalada de privilegios
 Buscamos la forma de escalar como usuario george y verificamos puertos y servicios en ejecución:Hay una base de datos mysql que no está expuesta, probamos a autenticarnos sin éxito con la credencial del usuario Admin que habíamos obtenido anteriormente.Seguimos enumerando la máquina y encontramos algo interesante:Nos conectamos a la base de datos y hacemos un dump de la tabla de usuarios:Vemos que el hash del usuario Admin es otro diferente, por lo que el dump que habíamos encontrado puede que no fuese reciente.Intentamos crackear este hash MD5 usando hashcat y el diccionario rockyou pero pronto comprobamos que no es crackeable y parece otro rabbit hole.Optamos por otra vía y enumeramos la versión del kernel del sistema y vemos que se trata de una versión muy antigua.Una simple búsqueda de esta versión del kernel nos arroja un posible exploit para la escalada de privilegios
-####🔓 CVE-2016-5195
+#### 🔓 CVE-2016-5195
 https://www.exploit-db.com/exploits/40839Este exploit abusa de la vulnerabilidad dirtycow para añadir una nueva línea al fichero /etc/passwd sin especificar el parámetro x para que no vaya a buscar la contraseña al /etc/shadow y ejecutar la sesión como usuario root.Copiamos el exploit en el directorio /tmp de la máquina y lo guardamos como exploit.c y lo compilamos tal como indica:A continuación listamos el archivo /etc/passwd y veremos que hay una nueva línea para un usuario llamado `rorefart`![](../../../../~gitbook/image.md)Ahora simplemente debemos autenticarnos como rorefart y la contraseña que habíamos puesto y ya somos root:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
@@ -364,19 +364,19 @@ Linux popcorn 2.6.3114-generic-pae #48-Ubuntu SMP
 // https://firefart.at
 //
 
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
 
 const char *filename = "/etc/passwd";
 const char *backup_filename = "/tmp/passwd.bak";
@@ -448,7 +448,7 @@ gcc -pthread exploit.c -o dirty -lcrypt
 chmod +x dirty
 ./dirty
 
-#Ponemos una contraseña cualquiera
+# Ponemos una contraseña cualquiera
 ```
 
 ```

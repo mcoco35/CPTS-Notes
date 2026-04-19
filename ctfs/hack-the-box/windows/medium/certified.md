@@ -4,9 +4,9 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Certified es una máquina Windows de dificultad media que simula un entorno de Active Directory con servicios de certificados (ADCS) implementados. La máquina requiere explotar vulnerabilidades en la configuración de certificados digitales y abusar de permisos de Active Directory para lograr la escalada de privilegios.El proceso de explotación involucra el uso de credenciales iniciales proporcionadas, enumeración exhaustiva de usuarios y servicios, abuso de permisos `WriteOwner` y `GenericWrite` en Active Directory, implementación de ataques Shadow Credentials mediante `pywhisker`, y finalmente explotación de la vulnerabilidad ESC9 en plantillas de certificados ADCS para obtener acceso administrativo.Esta máquina es especialmente valiosa para practicar técnicas de post-explotación en entornos empresariales reales, donde los servicios de certificados son comunes y las misconfigurations pueden llevar a compromisos completos del dominio.
-###🎯 Puntos Clave
+### 🎯 Puntos Clave
 - Enumeración de Active Directory: Uso de herramientas como `netexec`, `impacket` y `bloodhound` para mapear el dominio
 - Abuso de Permisos ACL: Explotación de `WriteOwner` y `GenericWrite` para modificar membresías de grupos
 - Shadow Credentials Attack: Implementación de credenciales sombra usando `pywhisker` para obtener hashes NTLM
@@ -14,17 +14,17 @@ Certified es una máquina Windows de dificultad media que simula un entorno de A
 - Certificate Template Abuse: Manipulación de UPN (User Principal Name) para suplantar identidades
 - Pass-the-Hash: Uso de hashes NTLM para autenticación sin conocer contraseñas en texto plano
 
-###🔍 Información de la Máquina
+### 🔍 Información de la Máquina
 AtributoValorIP10.10.11.41Dominiocertified.htbControlador de DominioDC01.certified.htbServicios ClaveADCS, LDAP, SMB, WinRM, KerberosVulnerabilidadesESC9, Shadow Credentials, ACL Abuse
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 Los puertos abiertos revelan un controlador de dominio Windows con los siguientes servicios clave:- Puerto 53 (DNS): Servicio de resolución de nombres del dominio
 - Puerto 88 (Kerberos): Autenticación del dominio
 - Puerto 389/636 (LDAP/LDAPS): Directorio activo para consultas
@@ -32,73 +32,73 @@ Los puertos abiertos revelan un controlador de dominio Windows con los siguiente
 - Puerto 5985 (WinRM): Administración remota de Windows
 - Puerto 9389 (.NET Message Framing): Posible servicio ADCS
 
-####🔑 Credenciales Iniciales
+#### 🔑 Credenciales Iniciales
 Como es común en las pruebas de penetración de Windows de la vida real, iniciará el cuadro de Administrador con las credenciales de la siguiente cuenta:- Nombre de usuario: judith.mader
 - Contraseña: judith09
 
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ 445 SMB - Enumeración Inicial
+#### 🗂️ 445 SMB - Enumeración Inicial
 Ya que disponemos de credenciales, comenzamos tratando de enumerar recursos compartidos, usuarios etc:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####👥 Enumeración de Usuarios del Dominio
+#### 👥 Enumeración de Usuarios del Dominio
 Creamos una lista con los usuarios obtenidos:![](../../../../~gitbook/image.md)
-####🎫 Verificación AS-Rep Roast
+#### 🎫 Verificación AS-Rep Roast
 Verificamos si de los usuarios obtenidos hay alguno que tenga la pre-autenticación de kerberos deshabilitada y podamos obtener un ticket:❌ Resultado: Ningún usuario vulnerable a AS-Rep Roast
-####🎯 Verificación Kerberoasting
+#### 🎯 Verificación Kerberoasting
 Con la credencial de la que disponemos verificamos si hay alguna cuenta sobre la que podamos realizar un ataque de kerberoasting:Obtenemos un resultado para la cuenta management_svc, no obstante, intentamos crackearlo offline usando hashcat y el diccionario rockyou.txt sin éxito:![](../../../../~gitbook/image.md)
-####💧 Password Spraying
+#### 💧 Password Spraying
 Verificamos si la contraseña de Judith está siendo reutilizada por algún otro usuario del dominio:bashResultado: Solo Judith usa esta contraseña
-###🩸 Análisis con BloodHound
+### 🩸 Análisis con BloodHound
 Utilizamos bloodhound-python como collector con las credenciales de judith para poder obtener el modelo del dominio y cargar en bloodhound con el fin de analizar posibles vías potenciales para ganar acceso.
-####🎯 Hallazgos Clave en BloodHound
+#### 🎯 Hallazgos Clave en BloodHound
 Vemos que Judith tiene permisos "WriteOwner" sobre el grupo Management:![](../../../../~gitbook/image.md)Además, vemos que cualquiera que pertenezca al grupo Management tiene permisos GenericWrite sobre la cuenta del usuario management_svc por lo que ya tenemos aquí una vía potencial de acceso:![](../../../../~gitbook/image.md)
-####📈 Cadena de Ataque Identificada
+#### 📈 Cadena de Ataque Identificada
 - judith.mader → WriteOwner → Management Group
 - Management Group → GenericWrite → management_svc
 - management_svc → Certificate Service DCOM Access → ADCS Exploitation
 
-###🚀 Explotación - Acceso Inicial
+### 🚀 Explotación - Acceso Inicial
 
-####👑 Abusando de WriteOwner
+#### 👑 Abusando de WriteOwner
 Primero necesitamos hacer que judith pertenezca al grupo Management:![](../../../../~gitbook/image.md)Ahora, usaré RPC para agregar a Judith al grupo de management:
-####🔐 Implementando Shadow Credentials
+#### 🔐 Implementando Shadow Credentials
 Aquí podríamos usar targetedKerberoast para tratar de realizar un ataque de kerberoasting sobre la cuenta management_svc y tratar de crackear la contraseña, pero esto ya lo hicimos con otro método anteriormente y vimos que la contraseña no estaba en rockyou.txt![](../../../../~gitbook/image.md)Podemos abusar de las credenciales shadow y obtener un hash de NT usando pywhisker, suponiendo que tengamos el ticket Kerberos (lo cual sí tenemos).Primero, usaré pywhisker para comprobar si management_svc tiene credenciales shadow:Nos da un error de permisosPara solucionarlo usamos `--action add` para agregar un atributo de clave pública (`msDS-KeyCredentialLink`) al usuario objetivo.
-####🎫 Obteniendo TGT con PKINITtools
+#### 🎫 Obteniendo TGT con PKINITtools
 Haré exactamente los pasos que nos ha indicado el comando del paso anterior y usaré PKINITtools para obtener el TGT:Actualizamos el reloj del sistema con el DC:Ahora ejecutaré el comando proporcionando la información del comando anterior:
-####🔓 Extrayendo Hash NTLM
+#### 🔓 Extrayendo Hash NTLM
 Exportamos la variable KRB5CCNAME con el ticket, actualizamos de nuevo la hora y usamos la herramienta getnthash.py para obtener el hash NTLM con el que podremos realizar pass the hash:
-####🎊 Primer Acceso - User Flag
+#### 🎊 Primer Acceso - User Flag
 Una vez obtenido el hash realizamos pass the hash usando evil-winrm y ganamos acceso como management_svc y ya podemos obtener la primera flag:
-####🔐 Escalada de Privilegios - ADCS Certificate Attack (ESC9)
+#### 🔐 Escalada de Privilegios - ADCS Certificate Attack (ESC9)
 📋 Información InicialDurante la enumeración del usuario actual, se descubrió que pertenece al grupo Certificate Service DCOM Access, lo cual es clave para esta escalada de privilegios.![](../../../../~gitbook/image.md)
-###🎯 Objetivo
+### 🎯 Objetivo
 Necesitamos escalar privilegios desde `management_svc` hasta `ca_operator` y finalmente obtener acceso como Administrator aprovechando vulnerabilidades en ADCS (Active Directory Certificate Services).![](../../../../~gitbook/image.md)
-####🔍 Fase 1: Shadow Credentials Attack
+#### 🔍 Fase 1: Shadow Credentials Attack
 
-####Contexto
+#### Contexto
 - Usuario actual: `management_svc`
 - Objetivo: `ca_operator`
 - Privilegio: GenericAll sobre ca_operator
 - Técnica: Certipy shadow credentials
 
-####Comando Ejecutado
+#### Comando Ejecutado
 
-####Resultado Obtenido
+#### Resultado Obtenido
 ✅ Éxito: Obtenido el hash NTLM de `ca_operator`
-####🔍 Fase 2: Enumeración de Plantillas Vulnerables
+#### 🔍 Fase 2: Enumeración de Plantillas Vulnerables
 
-####Búsqueda de Vulnerabilidades ADCS
+#### Búsqueda de Vulnerabilidades ADCS
 ![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Hallazgo Crítico🚨 Plantilla Vulnerable Encontrada: `Certified Authentication`- Vulnerabilidad: ESC9
 - Impacto: Permite escalada de privilegios a Administrator
 
-####⚡ Fase 3: Explotación ESC9
+#### ⚡ Fase 3: Explotación ESC9
 Paso 1: Modificación del UPNCambiar el UPN de `ca_operator` a `Administrator`:![](../../../../~gitbook/image.md)Paso 2: Solicitud de CertificadoSolicitar la plantilla vulnerable como `ca_operator`:![](../../../../~gitbook/image.md)Paso 3: Restauración del UPNRevertir el UPN para evitar detección:![](../../../../~gitbook/image.md)Paso 4: Autenticación con CertificadoObtener hash NTLM del Administrator:Resultado Final
-####🏆 Fase 4: Acceso Final como Administrator
+#### 🏆 Fase 4: Acceso Final como Administrator
 
-####Pass-the-Hash Attack
+#### Pass-the-Hash Attack
 
-####Verificación de Acceso
-Last updated 9 months ago- [📝 Descripción](#descripcion)
+#### Verificación de Acceso
+
 - [🎯 Puntos Clave](#puntos-clave)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración de Servicios](#enumeracion-de-servicios-1)

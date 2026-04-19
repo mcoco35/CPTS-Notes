@@ -1,6 +1,6 @@
 # Using-the-metasploit-framework
 
-####MSFconsole Commands
+#### MSFconsole Commands
 - Show all exploits:
 
 ```
@@ -67,7 +67,7 @@ set LHOST
 - Use Nmap and store results in the database:
 - Delete the current database:
 
-####Meterpreter Commands
+#### Meterpreter Commands
 - Display Meterpreter help:
 - Run a Meterpreter script:
 - Show target system information:
@@ -105,7 +105,7 @@ set LHOST
 - Clear event logs:
 - Modify file timestamps:
 - Reboot the target machine:
-Last updated 10 months ago
+
 ```
 set RHOST
 ```

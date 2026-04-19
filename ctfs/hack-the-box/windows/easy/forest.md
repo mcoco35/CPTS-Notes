@@ -4,13 +4,13 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Forest es una máquina Windows de dificultad fácil que simula un entorno de Active Directory típico de una organización corporativa. La máquina presenta un controlador de dominio Windows Server 2016 con múltiples servicios expuestos, incluyendo LDAP, SMB, Kerberos y WinRM.El vector de ataque principal implica la explotación de configuraciones incorrectas en Active Directory, específicamente:- Enumeración de usuarios a través de conexiones nulas (null sessions) en SMB y LDAP
 - AS-REP Roasting contra una cuenta de servicio sin pre-autenticación Kerberos
 - Escalada de privilegios mediante la explotación de permisos de grupo en Exchange Windows Permissions
 - DCSync para extraer credenciales del controlador de dominio
 Esta máquina es ideal para practicar técnicas de pentesting en entornos de Active Directory, cubriendo desde la enumeración inicial hasta la escalada completa de privilegios a Domain Admin.
-###🎯 Objetivos de Aprendizaje
+### 🎯 Objetivos de Aprendizaje
 - Enumeración de servicios en Active Directory
 - Explotación de null sessions en SMB/LDAP
 - Técnicas de AS-REP Roasting
@@ -18,52 +18,52 @@ Esta máquina es ideal para practicar técnicas de pentesting en entornos de Act
 - Escalada de privilegios mediante ACLs
 - Ataques DCSync contra controladores de dominio
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 PuertoServicioDescripción53DNSServicio de nombres de dominio88KerberosAutenticación de dominio135RPCLlamadas a procedimientos remotos139/445SMBCompartición de archivos389/3268LDAPDirectorio activo5985WinRMAdministración remota PowerShell
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ 445 SMB
+#### 🗂️ 445 SMB
 No tenemos credenciales, así que tratamos de enumerar recursos haciendo uso de una null sesion:Primero lo intentamos con la herramienta smbclient pero no obtenemos nadaTratamos de enumerar con el script de enum4linux y comenzamos a obtener información:👥 Usuarios Descubiertos🔐 Política de Contraseñas🏛️ Grupos de Dominio🔍 Enumeración de usuarios SMBTambién podemos tratar de enumerar usuarios usando netexec con los siguiente parámetros:![](../../../../~gitbook/image.md)🌐 Enumeración de usuarios LDAPRealizamos un proceso de numeración similar al anterior pero esta vez contra LDAP y al observar la salida, vemos un usuario nuevo que no teníamos con la anterior enumeración `svc_alfresco`![](../../../../~gitbook/image.md)
-###🎯 Explotación Inicial
+### 🎯 Explotación Inicial
 
-####🔑 AS-REP Roasting
+#### 🔑 AS-REP Roasting
 Podemos verificar si existe algún usuario que no tenga habilitada la pre-autenticación de kerberos.🎯 Resultado clave: Encontramos que la cuenta `svc-alfresco` no tiene la pre-autenticación de kerberos activada y logramos obtener su hash AS-REP.
-####💥 Cracking del Hash
+#### 💥 Cracking del Hash
 Procedemos a crackear el hash obtenido:![](../../../../~gitbook/image.md)Alternativamente, usando hashcat:![](../../../../~gitbook/image.md)
-####🏆 Credenciales Obtenidas
+#### 🏆 Credenciales Obtenidas
 
-####🔓 Acceso Inicial
+#### 🔓 Acceso Inicial
 Verificamos si podemos autenticarnos con las credenciales obtenidas:![](../../../../~gitbook/image.md)Obtenemos acceso via WinRM:
-####🚩 User Flag
+#### 🚩 User Flag
 Capturamos la primera flag en el directorio Desktop del usuario svc-alfresco:
-###🔝 Escalada de Privilegios
+### 🔝 Escalada de Privilegios
 
-####🩸 Análisis con BloodHound
+#### 🩸 Análisis con BloodHound
 Tras enumerar la máquina en busca de posibles vías de explotación, procedemos a usar BloodHound para un análisis más profundo. Subimos la herramienta SharpHound.exe para extraer la información de dominio:Una vez cargada la información en BloodHound, seleccionamos la cuenta del usuario svc-alfresco como "Owned Users" y analizamos las relaciones:![](../../../../~gitbook/image.md)
-####🎯 Identificación de Ruta de Ataque
+#### 🎯 Identificación de Ruta de Ataque
 Utilizamos la siguiente consulta Cypher para encontrar el camino más corto hacia los administradores de dominio:![](../../../../~gitbook/image.md)
-####🔓 Explotación de Permisos
+#### 🔓 Explotación de Permisos
 El análisis revela que:- `svc-alfresco` es miembro de Account Operators
 - Account Operators tiene control total (GenericAll) sobre el grupo Exchange Windows Permissions
 - Exchange Windows Permissions tiene privilegios WriteDACL sobre el dominio
 
-####👤 Creación de Usuario Malicioso
+#### 👤 Creación de Usuario Malicioso
 Aprovechamos estos permisos para crear un nuevo usuario y añadirlo a los grupos necesarios:Verificamos que se ha creado la cuenta y pertenece al grupo requerido:![](../../../../~gitbook/image.md)
-####🛠️ Configuración de Privilegios DCSync
+#### 🛠️ Configuración de Privilegios DCSync
 A continuación transferimos la herramienta [powerview.ps1](https://github.com/PowerShellMafia/PowerSploit/blob/dev/Recon/PowerView.ps1) al host :Ejecutamos el bypass de AMSI y otorgamos privilegios DCSync:
-####💎 Extracción de Credenciales
+#### 💎 Extracción de Credenciales
 Con el usuario john ahora teniendo privilegios DCSync, procedemos a extraer todas las credenciales del dominio:
-####👑 Acceso como Administrator
+#### 👑 Acceso como Administrator
 Realizamos Pass-the-Hash con las credenciales del administrador:![](../../../../~gitbook/image.md)
-####🏁 Root Flag
+#### 🏁 Root Flag
 Con acceso de administrador, capturamos la flag final:Last updated 9 months ago- [📝 Descripción](#descripcion)
 - [🎯 Objetivos de Aprendizaje](#objetivos-de-aprendizaje)
 - [🔭 Reconocimiento](#reconocimiento)

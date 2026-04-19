@@ -4,9 +4,9 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Sequel es una máquina Windows de dificultad fácil que simula un entorno de Active Directory corporativo. La explotación comienza con credenciales válidas proporcionadas para el usuario `rose`, las cuales nos permiten enumerar recursos SMB y descubrir archivos Excel con credenciales adicionales de usuarios y servicios.La fase inicial involucra la enumeración de servicios como MSSQL, donde obtenemos acceso con la cuenta privilegiada `sa` y aprovechamos `xp_cmdshell` para ejecutar comandos del sistema. A través de técnicas de Password Spraying, logramos movimiento lateral hacia la cuenta `ryan`, que posee privilegios especiales sobre el objeto `ca_svc` en Active Directory.La escalada de privilegios se realiza mediante ADCS (Active Directory Certificate Services) abuse, específicamente explotando la vulnerabilidad ESC4 que permite modificar plantillas de certificados. Utilizando técnicas de Shadow Credentials y manipulación de ACLs, transformamos una plantilla vulnerable en ESC1 para finalmente obtener un certificado válido de administrador de dominio.
-###🎯 Puntos Clave
+### 🎯 Puntos Clave
 - ✅ Enumeración inicial con credenciales válidas de `rose`
 - ✅ Descubrimiento de credenciales en archivos Excel del recurso SMB
 - ✅ Explotación de MSSQL con cuenta privilegiada `sa`
@@ -17,17 +17,17 @@ Sequel es una máquina Windows de dificultad fácil que simula un entorno de Act
 - ✅ ADCS ESC4 → ESC1 para escalada de privilegios
 - ✅ Obtención de certificado de administrador de dominio
 
-###🔍 Información de la Máquina
+### 🔍 Información de la Máquina
 CampoValorIP10.10.11.51Dominiosequel.htbDCDC01.sequel.htbOSWindows Server 2019Servicios PrincipalesDNS, Kerberos, LDAP, SMB, MSSQL, WinRM
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 La máquina expone varios servicios típicos de un Domain Controller:- Puerto 53 (DNS): Resolución de nombres del dominio
 - Puerto 88 (Kerberos): Autenticación del dominio
 - Puerto 389/636 (LDAP): Directorio activo
@@ -35,41 +35,41 @@ La máquina expone varios servicios típicos de un Domain Controller:- Puerto 53
 - Puerto 1433 (MSSQL): Base de datos SQL Server
 - Puerto 5985 (WinRM): Administración remota
 
-####🔑 Credenciales Iniciales
+#### 🔑 Credenciales Iniciales
 Como es común en las pruebas de penetración de Windows de la vida real, iniciará el cuadro de Administrador con las credenciales de la siguiente cuenta:- Nombre de usuario: rose
 - Contraseña: KxEPkKe6R8su
 
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🏠 53 DNS
+#### 🏠 53 DNS
 🧠 Desglose de flags y argumentos:Flag/ArgumentoSignificado`-r`Desactiva la resolución inversa (no intenta hacer reverse lookup de IPs).`--dnsserver 10.10.11.51`Usa el servidor DNS 10.10.11.51 en lugar del predeterminado del sistema.`--enum`Activa enumeración completa, que incluye subdominios, transferencias de zona, etc.`-p 0`Desactiva la enumeración de hosts con nombres similares (`similar domain guessing`).`-s 0`Desactiva el escaneo de servicios (no intenta verificar si hay servicios activos en los subdominios).`-f /usr/share/wordlists/seclists/Discovery/DNS/subdomains-top1million-110000.txt`Utiliza este diccionario de subdominios para hacer fuerza bruta de nombres.`sequel.htb`Es el dominio objetivo para la enumeración.En esta ocasión no encontramos nada relevante.
-####🗂️ 445 SMB - Enumeración Inicial
+#### 🗂️ 445 SMB - Enumeración Inicial
 Ya que disponemos de credenciales, comenzamos tratando de enumerar recursos compartidos, usuarios etc:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🎫 Kerberoasting
+#### 🎫 Kerberoasting
 Con las credenciales de rose, verificamos si hay alguna cuenta kerberoastable de la cual podamos obtener su TGS![](../../../../~gitbook/image.md)Obtenemos dos TGS, uno para la cuenta del usuario sql_svc y otro para ca_svc. Intentamos crackear offline con hashcat pero las contraseñas no están en rockyou.txt.
-####🗃️ 1433 MSSQL
+#### 🗃️ 1433 MSSQL
 Confirmamos que las credenciales del usuario rose son válidas con este servicio usando impacket-mssqlclient con la flag -windows-auth para usar NTLM (Windows Authentication)📊 Enumeración de la versión de base de datos❌ Intento fallido de habilitar xp_cmd_shellEl usuario rose no tiene permisos para habilitar xp_cmdshell:🎣 Captura de hash NTLMIniciamos un servidor SMB e intentamos capturar credenciales mediante una petición a un recurso inexistente:Desde la consola MSSQL ejecutamos:![](../../../../~gitbook/image.md)Obtenemos el hash NTLMv2 del usuario sql_svc, pero no es crackeable con rockyou.📁 Explorando recursos compartidosMontamos los recursos SMB para explorar su contenido:Encontramos archivos Excel con credenciales:🔓 Extracción de credenciales de archivos ExcelEn Excel 2007, los archivos XLSX sustituyeron a los archivos .XLS como archivo estándar para guardar hojas de cálculo en Excel. A diferencia de los archivos XLS, que almacenan los datos de la hoja de cálculo en un único archivo binario, los archivos XLSX se guardan en formato Open XML, que almacena los datos como archivos y carpetas independientes en un paquete Zip comprimido. El archivo incluye el fichero [Content_Types].xml, que describe la hoja de cálculo, y un fichero .XML para cada hoja de cálculo.Esto significa que podemos extraer manualmente el archivo en nuestro host para ver el contenido de cada una de las hojas.Como alternativa es posible usar algunas herramienta en línea como:- [https://jumpshare.com/viewer/xlsx](https://jumpshare.com/viewer/xlsx)![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Analizando el contenido de los archivos XLSX (formato Open XML comprimido), obtenemos las siguientes credenciales:First NameLast NameEmailUsernamePasswordAngelaMartinangela@sequel.htbangela0fwz7Q4mSpurIt99OscarMartinezoscar@sequel.htboscar86LxLBMgEWaKUnBGKevinMalonekevin@sequel.htbkevinMd9Wlq1E5bZnVDVoNULLNULLsa@sequel.htbsaMSSQLP@ssw0rd!
-###💀 Explotación Inicial
+### 💀 Explotación Inicial
 
-####🔐 Acceso con cuenta sa en MSSQL
+#### 🔐 Acceso con cuenta sa en MSSQL
 Probamos las credenciales de la cuenta sa (System Administrator) en MSSQL:✅ Éxito! La cuenta sa tiene privilegios elevados.
-####⚙️ Habilitando xp_cmdshell
+#### ⚙️ Habilitando xp_cmdshell
 Con privilegios de sa podemos habilitar la ejecución de comandos:
-####🚀 Obteniendo Reverse Shell
+#### 🚀 Obteniendo Reverse Shell
 Generamos un payload de PowerShell codificado en base64 para obtener una reverse shell:![](../../../../~gitbook/image.md)Obtenemos acceso como usuario `sql_svc`:
-###🔄 Movimiento Lateral
+### 🔄 Movimiento Lateral
 
-####🔍 Enumeración del sistema
+#### 🔍 Enumeración del sistema
 Usamos bloodhound-python como collector para obtener los objetos de dominio y cargarlos en bloodhound para analizar posibles vías potenciales para el movimiento lateral o escalada:Durante la enumeración del sistema encontramos credenciales adicionales en el archivo `C:\SQL2019\ExpressAdv_ENU\sql-Configuration.INI`:![](../../../../~gitbook/image.md)Credencial encontrada: `sql_svc:WqSZAF6CysDQbGb3`
-####💥 Password Spraying
+#### 💥 Password Spraying
 Verificamos si algún usuario reutiliza esta contraseña usando netexec:![](../../../../~gitbook/image.md)¡Bingo! El usuario `ryan` está reutilizando la contraseña de `sql_svc`.
-####🎯 Acceso como ryan
+#### 🎯 Acceso como ryan
 ![](../../../../~gitbook/image.md)Obtenemos la primera flag (user.txt) y confirmamos que ryan pertenece al grupo Certificate Service DCOM Access.
-###🔝 Escalada de Privilegios
+### 🔝 Escalada de Privilegios
 
-####🩸 Análisis con BloodHound
+#### 🩸 Análisis con BloodHound
 Usando bloodhound-python recopilamos información del dominio:![](../../../../~gitbook/image.md)Hallazgo crítico: El usuario ryan tiene privilegio WriteOwner sobre el objeto CA_SVC.
-####Tomando el control de ca_svc
+#### Tomando el control de ca_svc
 🎯 Contexto InicialComo usuario ryan, tenemos el privilegio WriteOwner sobre CA_SVC, lo que nos convierte en propietarios de la cuenta y nos permite escalar privilegios.📋 Introducción al privilegio WriteOwnerEl privilegio WriteOwner nos permite diferentes tipos de ataques dependiendo del objeto:Tipo de ObjetoCapacidadesUsuarioAsignar todos los derechos a otra cuenta para realizar: restablecimiento de contraseña, Kerberoasting dirigido, o Shadow CredentialsGrupoAñadir/eliminar miembros después de conceder privilegios totales al nuevo propietarioGPOModificar la política de grupo💡 Preferencia: Utilizaremos Kerberoasting dirigido o Shadow Credentials para evitar cambiar contraseñas de usuarios innecesariamente.🎯 OPCIÓN 1: Targeted KerberoastingPrerrequisitosPara realizar un ataque de kerberoasting necesitamos uno de estos privilegios:- ✅ `WriteOwner` (tenemos este)
 - `GenericAll`
 - `GenericWrite`
@@ -77,26 +77,26 @@ Usando bloodhound-python recopilamos información del dominio:![](../../../../~g
 - `Validated-SPN`
 - `WriteProperties`
 
-####🔧 Proceso del Ataque
+#### 🔧 Proceso del Ataque
 Funcionamiento:- Adjuntar/generar un SPN para la cuenta de usuario
 - Solicitar TGS para la cuenta de usuario
 - Crackear el TGS (encriptado con el hash NTLM)
 
-####💻 Ejecución
+#### 💻 Ejecución
 Herramienta utilizada: [targetedKerberoast](https://github.com/ShutdownRepo/targetedKerberoast)![](../../../../~gitbook/image.md)
-####🔐 Intento de Cracking
+#### 🔐 Intento de Cracking
 ![](../../../../~gitbook/image.md)❌ Resultado: La contraseña no se encuentra en rockyou.txt
-####🎯 OPCIÓN 2: Shadow Credentials + ADCS Abuse
+#### 🎯 OPCIÓN 2: Shadow Credentials + ADCS Abuse
 📖 Conceptos Clave- Shadow Credentials: Modificación del atributo `msDS-KeyCredentialLink` para agregar claves controladas por el atacante
 - ADCS Abuse: Explotación de plantillas de certificados mal configuradas para emitir certificados válidos
 🚀 Proceso de escaladaPaso 1: Modificar el propietarioConceder a `Ryan` control total sobre `ca_svc`![](../../../../~gitbook/image.md)Paso 2: Garantizar privilegios totalesAsegurar que `ryan` tenga FullControl sobre `ca_svc`![](../../../../~gitbook/image.md)Paso 3: Generar Shadow CredentialsCrear nuevas credenciales para autenticación basada en certificados![](../../../../~gitbook/image.md)Paso 4: Buscar plantillas vulnerables![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🔥 ESC4 (vía ESC1)
+#### 🔥 ESC4 (vía ESC1)
 
-####📊 Análisis de Vulnerabilidad
+#### 📊 Análisis de Vulnerabilidad
 ESC4 ocurre cuando existen controles de acceso débiles en una plantilla de certificado.🔍 Hallazgo: El grupo de editores de certificados tiene control total sobre la plantilla DunderMifflinAuthentication.
-####🛠️ Explotación
+#### 🛠️ Explotación
 Versión Certipy 4.8.2Paso 5: Modificar plantillaResultado esperado:Paso 6: Solicitar certificado de administradorResultado esperado:Versión Certipy 5.0.2Paso 5: Modificar plantilla (nueva sintaxis)![](../../../../~gitbook/image.md)Paso 6: Solicitar certificado
-####🏆 Fase Final: Obtención de Acceso Administrativo
+#### 🏆 Fase Final: Obtención de Acceso Administrativo
 Paso 7: Recuperar hash NTLM del administrador![](../../../../~gitbook/image.md)Paso 8: Pass-the-Hash para acceso completo✅ Verificación de AccesoLast updated 9 months ago- [📝 Descripción](#descripcion)
 - [🎯 Puntos Clave](#puntos-clave)
 - [🔭 Reconocimiento](#reconocimiento)

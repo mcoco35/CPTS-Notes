@@ -1,69 +1,69 @@
 # XSS
 
-####Basic Payloads
+#### Basic Payloads
 
-####Basic alert XSS
+#### Basic alert XSS
 
 ```
 alert(window.origin)
 ```
 
-####Plaintext injection
+#### Plaintext injection
 
 ```
 
 ```
 
-####Basic print execution
+#### Basic print execution
 
 ```
 print()
 ```
 
-####HTML-based alert XSS
+#### HTML-based alert XSS
 
 ```
 
 ```
 
-####DOM Manipulation
+#### DOM Manipulation
 
-####Change background color
+#### Change background color
 
 ```
 document.body.style.background = "#141d2b"
 ```
 
-####Change background image
+#### Change background image
 
 ```
 document.body.background = "https://www.hackthebox.eu/images/logo-htb.svg"
 ```
 
-####Change website title
+#### Change website title
 
-####Overwrite website's main body
+#### Overwrite website's main body
 
-####Remove specific HTML element
+#### Remove specific HTML element
 
-####Advanced Payloads
+#### Advanced Payloads
 
-####Load remote script
+#### Load remote script
 
-####Send cookie data to attacker
+#### Send cookie data to attacker
 
-###Common Commands
+### Common Commands
 
-####Scanning and Exploitation
+#### Scanning and Exploitation
 
-####Run xsstrike on a URL parameter
+#### Run xsstrike on a URL parameter
 
-####Networking
+#### Networking
 
-####Start netcat listener
+#### Start netcat listener
 
-####Start PHP server
-Last updated 10 months ago
+#### Start PHP server
+
 ```
 document.title = 'HackTheBox Academy'
 ```

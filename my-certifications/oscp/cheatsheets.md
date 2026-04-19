@@ -1,7 +1,7 @@
 # Cheatsheets
 
 A OSCP Cheatsheet collection
-###📚 Resources
+### 📚 Resources
 - [Cheatsheet Sai Sathvik](https://s4thv1k.com/posts/oscp-cheatsheet/)
 - [Cheatsheet dise0](https://dise0.gitbook.io/h4cker_b00k)
 - [Cheatsheet 0xsyr0](https://github.com/0xsyr0/OSCP)

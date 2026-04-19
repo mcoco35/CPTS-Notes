@@ -3,40 +3,40 @@
 ![](../../../../~gitbook/image.md)Publicado: 05 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 BoardLight es una máquina de dificultad Easy de HackTheBox que simula un entorno empresarial donde una organización utiliza un sistema CRM (Customer Relationship Management) basado en DoliBarr. La máquina presenta múltiples vectores de ataque que van desde enumeración web básica hasta escalada de privilegios mediante vulnerabilidades en binarios SUID.El objetivo principal es demostrar técnicas comunes de pentesting web, incluyendo fuzzing de subdominios, explotación de vulnerabilidades conocidas (CVE), reutilización de credenciales y escalada de privilegios a través de binarios mal configurados. Esta máquina es perfecta para principiantes que quieren practicar metodologías de pentesting estructuradas y aprender sobre la importancia de mantener sistemas actualizados.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP (board.htb)
+#### 80 HTTP (board.htb)
 ![](../../../../~gitbook/image.md)Al acceder al servicio http del puerto 80 no vemos gran cosa. Hay un formulario de contacto que probamos a rellenar interceptando la petición con burp pero no parece estar enviado nada:![](../../../../~gitbook/image.md)
-####📁 Fuzzing de directorios
+#### 📁 Fuzzing de directorios
 Tras realizar fuzzing de directorios con dirsearch no encontramos nada interesante que usar como posible vector de ataque.![](../../../../~gitbook/image.md)Revisando el código fuente de la aplicación enumeramos un dominio board.htb:![](../../../../~gitbook/image.md)Añadimos este dominio al fichero /etc/hosts de nuestro host de ataque:
-####🌍 Fuzzing de subdominios
+#### 🌍 Fuzzing de subdominios
 Al realizar fuzzing de subdominios encontramos un subdominio llamado crm![](../../../../~gitbook/image.md)Añadimos este nuevo descubrimiento a nuestro fichero /etc/hosts y accedemos a él para analizarlo.
-####💼 80 HTTP crm.board.htb
+#### 💼 80 HTTP crm.board.htb
 Al acceder a este nuevo subdominio descubierto encontramos un servicio llamado DoliBarr en su versión 17.0.0. Buscamos algo de información pública sobre este servicio![](../../../../~gitbook/image.md)Se trata de un software de gestión de CRM del cual podemos encontrar más información en https://www.dolibarr.org/![](../../../../~gitbook/image.md)Al probar con las credenciales `admin:admin` accedemos sin mayor poblema a la herramienta aunque no vemos gran cosa:![](../../../../~gitbook/image.md)
-####🎯 Acceso Inicial
+#### 🎯 Acceso Inicial
 💥 CVE-2023-30253 - DoliBarr PHP Code InjectionEncontramos además que esta versión es vulnerable a PHP Code InjectionReferencias:- 🔗 Exploit: [https://github.com/nikn0laty/Exploit-for-Dolibarr-17.0.0-CVE-2023-30253](https://github.com/nikn0laty/Exploit-for-Dolibarr-17.0.0-CVE-2023-30253)
 - 📄 Advisory: [https://www.swascan.com/security-advisory-dolibarr-17-0-0/](https://www.swascan.com/security-advisory-dolibarr-17-0-0/)
 Iniciamos un listener con netcat:Lanzamos el exploit especificando las credenciales y la ip y puerto de nuestro host de ataque:![](../../../../~gitbook/image.md)Conseguimos la ejecución remota de comandos y ganamos acceso al sistema:![](../../../../~gitbook/image.md)
-####🔄 Post-Explotación
+#### 🔄 Post-Explotación
 👥 Enumeración de usuariosEnumeramos usuarios en la máquina y comprobamos que no tenemos acceso al directorio de la usuaria larissa
-####🗄️ Enumeración de base de datos
+#### 🗄️ Enumeración de base de datos
 Descubrimos un fichero `conf.php` en el directorio `~/html/crm.board.htb/htdocs/conf$ `que revela unas credenciales de base de datos:![](../../../../~gitbook/image.md)Nos conectamos a la base de datos![](../../../../~gitbook/image.md)
-####⬆️ Movimiento lateral
+#### ⬆️ Movimiento lateral
 Ninguno de los hashes es crackeable con hashcat y rockyou pero verificamos que se está reutilizando la contraseña `serverfun2$2023!!` para la usuaria larissa y logramos el movimiento lateral:
-####🔑 Escalada de Privilegios
+#### 🔑 Escalada de Privilegios
 Verificamos en primer lugar que larissa no puede ejecutar ningún comando o binario como root:Tampoco vemos ninguna capabiliy interesante:Comprobamos binarios con permisos SUID de los que podamos abusar y encontramos uno que no es común llamado Enlightenment y cuya versión además vemos que es la 0.23.1:💥 CVE-2022-37706 - Enlightenment Privilege EscalationUna búsqueda sobre este binario nos muestra un exploit para la escalada de privilegios:🔗 Exploit: [https://github.com/d3ndr1t30x/CVE-2022-37706/tree/main](https://github.com/d3ndr1t30x/CVE-2022-37706/tree/main)📝 Descripción de la vulnerabilidad: La vulnerabilidad existe debido al manejo incorrecto de las rutas de acceso que empiezan por la subcadena `/dev/..` en el binario `enlightenment_sys`, que por defecto es SUID-root. Al explotar este comportamiento, los atacantes pueden ejecutar comandos arbitrarios como root, obteniendo así el control total del sistema.
-####🚀 Ejecución del exploit y escalada a root
-Last updated 10 months ago- [📝 Descripción](#descripcion)
+#### 🚀 Ejecución del exploit y escalada a root
+
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
 
@@ -227,7 +227,7 @@ larissa@boardlight:~$ find / -perm -4000 2>/dev/null
 ```
 
 ```
-#!/usr/bin/bash
+# !/usr/bin/bash
 # CVE-2022-37706 Exploit - Enlightenment v0.25.3 Privilege Escalation
 
 echo "CVE-2022-37706 Exploit Initiated"

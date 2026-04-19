@@ -1,6 +1,6 @@
 # Priv-Esc
 
-####I. Initial Enumeration
+#### I. Initial Enumeration
 RDP & Network
 ```
 xfreerdp /v: /u:htb-student
@@ -35,7 +35,7 @@ net localgroup administrators
 net accounts
 ```
 Named Pipes
-####II. Handy Commands
+#### II. Handy Commands
 SQL ServerPrivilege EscalationLSASS Dumping & MimikatzFile Ownership & ACLsHash Extraction & File CopyEvent LogsDLLs, Users, & ServicesRegistry & DNSFile Transfer & ExecutionCredential Theft - File SearchLast updated 10 months ago
 ```
 pipelist.exe /accepteula

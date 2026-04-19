@@ -3,23 +3,23 @@
 ![](../../../../~gitbook/image.md)Publicado: 13 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Sunday es una máquina basada en Oracle Solaris que pone a prueba tus habilidades de enumeración de servicios poco comunes como Finger. La escalada implica el descubrimiento de credenciales a través de archivos de backup y el abuso de privilegios sudo. La máquina requiere conocimientos sobre enumeración básica, crackeo de contraseñas y vectores de elevación de privilegios en entornos Unix.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####6787 HTTP (Apache )
+#### 6787 HTTP (Apache )
 Al al servicio de este puerto un mensaje nos indica que debemos hacerlo mediante https, así que somo redirigidos a:https://10.10.10.76:6787/solaris/login/![](../../../../~gitbook/image.md)Intentamos acceder con las credenciales por defecto jack:jack y root:solaris sin éxito.Poco más podemos hacer aquí de momento
-####79 FINGER
+#### 79 FINGER
 Investigamos un poco sobre cómo enumerar este servicio y encontramos un script de pentestmonkey en perl:https://github.com/pentestmonkey/finger-user-enum/blob/master/finger-user-enum.plEste script permite enumerar usuarios pasando una lista como parámetroDescargamos el scriptEjecutamos el script usando la lista names de sectlistsObtenemos los siguientes resultados![](../../../../~gitbook/image.md)Podríamos usar fuerza bruta con hydra con cada uno de estos usuarios y el diccionaro rockyou contra el puerto ssh aunque primero podemos probar con algunas credenciales comunes como admin, root, sunday, Sunday, etc:Finalmente logramos iniciar sesión vía ssh en el puerto 22022 con `sunny:Sunday`Sin embargo la primera flag está en el usuario sammy y de momento no tenemos acceso:Verficamos posibles binarios que sunny pueda ejecutar como rootAunque no parece que vaya a llevarnos a buen puerto.Continuamos enumerando y damos con algo que podría ser interesante:Tenemos un archivo de backup del fichero shadow:Podemos intentar usar fuerza bruta con hydra y rockyou para intentar crackear el hash del usuario sammy:Usamos la herramineta name the hash para determinar qué tipo de hash es:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Obtenemos la contraseña del usuario `sammy:cooldude!` y nos autenticamos como este usuario en el host remoto:Ahora sí, obtenemos la primera flag:Ahora verificamos si sammy puede ejecutar algún binario como root:Buscamos información de este binario en GTfobins y lo usamos para escalar a root y obtener la flag:https://gtfobins.github.io/gtfobins/wget/#sudoLast updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)
 - [🔭 Reconocimiento](#reconocimiento)

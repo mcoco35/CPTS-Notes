@@ -1,6 +1,6 @@
 # Metasploit Modules
 
-##Active Directory Modules
+## Active Directory Modules
 
 ```
 use post/windows/gather/enum_ad_to_wordlist
@@ -13,9 +13,9 @@ use post/windows/gather/enum_ad_user_comments
 use post/windows/gather/credentials/enum_laps
 ```
 
-##Multiplatform
+## Multiplatform
 
-###Post
+### Post
 
 ```
 use post/multi/gather/env
@@ -23,44 +23,44 @@ use post/multi/gather/ping_sweep
 use post/windows/gather/hashdump
 ```
 
-####Privilege Escalation
+#### Privilege Escalation
 
 ```
 use post/multi/recon/local_exploit_suggester
 ```
 
-##Windows Modules
+## Windows Modules
 
-###3rd Party Applications
+### 3rd Party Applications
 
-###Information Gathering
+### Information Gathering
 
-###Enumeration Modules
+### Enumeration Modules
 
-###Privilege Escalation
+### Privilege Escalation
 
-####Recon
+#### Recon
 
-###Spy modules
+### Spy modules
 
-###Forensic Modules
+### Forensic Modules
 
-###Generic
+### Generic
 
-##Browser Modules
+## Browser Modules
 
-###Browser modules (Firefox)
+### Browser modules (Firefox)
 
-###Browser modules (Chrome)
+### Browser modules (Chrome)
 
-###Browser modules (Internet Explorer)
+### Browser modules (Internet Explorer)
 
-###Browser modules (Multiple)
+### Browser modules (Multiple)
 
-##Packet Capture
+## Packet Capture
 
-###Sniffer
-Last updated 10 months ago- [Active Directory Modules](#active-directory-modules)
+### Sniffer
+
 - [Multiplatform](#multiplatform)
 - [Post](#post)
 - [Windows Modules](#windows-modules)

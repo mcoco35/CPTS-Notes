@@ -4,9 +4,9 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Cicada es una máquina Windows de dificultad fácil que simula un entorno de Active Directory corporativo. La explotación comienza con la enumeración de servicios SMB sin autenticación, donde se descubre información crítica almacenada en recursos compartidos accesibles.El vector inicial involucra la obtención de credenciales a través de archivos de recursos humanos mal configurados, seguido de un ataque de password spraying que permite acceso inicial al sistema. La escalada de privilegios se aprovecha del privilegio `SeBackupPrivilege` del grupo Backup Operators para extraer la base de datos NTDS y realizar un dump completo de hashes del dominio.Esta máquina es excelente para practicar técnicas fundamentales de pentesting en Active Directory, incluyendo enumeración SMB, password spraying, abuso de privilegios de Windows y técnicas de pass-the-hash.
-###🎯 Puntos Clave
+### 🎯 Puntos Clave
 - Enumeración SMB: Identificación de recursos compartidos con acceso anónimo
 - Information Disclosure: Credenciales expuestas en archivos de HR y scripts
 - Password Spraying: Reutilización de credenciales contra múltiples cuentas
@@ -14,15 +14,15 @@ Cicada es una máquina Windows de dificultad fácil que simula un entorno de Act
 - NTDS Extraction: Extracción de la base de datos NTDS usando Volume Shadow
 - Pass-the-Hash: Acceso administrativo mediante hashes NTLM
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 El escaneo revela un entorno típico de Active Directory con los siguientes servicios críticos:- Puerto 53 (DNS): Simple DNS Plus - Servicio DNS del dominio
 - Puerto 88 (Kerberos): Autenticación Kerberos del AD
 - Puerto 389/636 (LDAP/LDAPS): Directorio Active Directory
@@ -31,14 +31,14 @@ El escaneo revela un entorno típico de Active Directory con los siguientes serv
 - Dominio identificado: `cicada.htb`
 - Controlador de dominio: `CICADA-DC.cicada.htb`
 
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ SMB (Puerto 445) - Acceso Inicial
+#### 🗂️ SMB (Puerto 445) - Acceso Inicial
 Ya que no disponemos de credenciales, comenzamos tratando de enumerar posibles recursos mediante una sesión nula:🎯 Recursos compartidos identificados:- HR: Acceso de lectura - Potencial información sensible
 - DEV: Sin permisos aparentes inicialmente
 - IPC$: Acceso de lectura - Para enumeración adicional
 🔍 Enumeración del recurso HR📄 Contenido del archivo "Notice from HR.txt":![](../../../../~gitbook/image.md)🔑 Primera credencial obtenida: `Cicada$M6Corpb*@Lp#nZp!8`
-####👥 Enumeración de Usuarios del Dominio
+#### 👥 Enumeración de Usuarios del Dominio
 Tenemos una contraseña pero no tenemos usuarios, así que procedemos a enumerar usuarios mediante RID brute force:📝 Creación de lista de usuarios👥 Usuarios identificados:- Administrator
 - Guest
 - krbtgt
@@ -49,38 +49,38 @@ Tenemos una contraseña pero no tenemos usuarios, así que procedemos a enumerar
 - david.orelious
 - emily.oscars
 
-###🎯 Password Spraying
+### 🎯 Password Spraying
 Ahora realizamos password spraying con la contraseña obtenida contra todos los usuarios identificados:![](../../../../~gitbook/image.md)🎉 Primera cuenta válida encontrada: `michael.wrightson:Cicada$M6Corpb*@Lp#nZp!8`
-####🔍 Enumeración Autenticada
+#### 🔍 Enumeración Autenticada
 Con las credenciales válidas, procedemos a enumerar usuarios de forma autenticada:![](../../../../~gitbook/image.md)💎 Información crítica encontrada: El usuario `david.orelious` tiene su contraseña almacenada en el campo descripción.🔑 Segunda credencial obtenida: `david.orelious:aRt$Lp#7t*VQ!3`
-####🗂️ Acceso al recurso DEV
+#### 🗂️ Acceso al recurso DEV
 Verificamos los permisos del usuario david.orelious sobre los recursos compartidos:![](../../../../~gitbook/image.md)✅ El usuario david.orelious tiene acceso de lectura al recurso DEV📁 Enumeración del recurso DEV📜 Análisis del script Backup_script.ps1:![](../../../../~gitbook/image.md)🔑 Tercera credencial obtenida: `emily.oscars:Q!3@Lp#M6b*7t*Vt`
-###🚀 Acceso Inicial
+### 🚀 Acceso Inicial
 
-####🔐 Verificación de acceso WinRM
+#### 🔐 Verificación de acceso WinRM
 Verificamos si las nuevas credenciales nos permiten acceso remoto via WinRM:![](../../../../~gitbook/image.md)✅ Acceso WinRM exitoso con emily.oscars
-####🏆 User Flag
+#### 🏆 User Flag
 
-###🔝 Escalada de Privilegios
+### 🔝 Escalada de Privilegios
 
-####🔍 Enumeración del Usuario
+#### 🔍 Enumeración del Usuario
 Analizamos la información del usuario emily.oscars:![](../../../../~gitbook/image.md)🎯 Información crítica identificada:- El usuario pertenece al grupo Backup Operators
 - Tiene habilitado el privilegio SeBackupPrivilege
 ![](../../../../~gitbook/image.md)
-####🎁 Abuso del Privilegio SeBackupPrivilege
+#### 🎁 Abuso del Privilegio SeBackupPrivilege
 El privilegio `SeBackupPrivilege` permite realizar copias de seguridad de archivos del sistema, incluyendo archivos críticos como:- `SYSTEM` (Clave de registro del sistema)
 - `SAM` (Security Account Manager)
 - `NTDS.dit` (Base de datos de Active Directory)
 📋 Preparación del entornoPaso 1: Crear script VSS para montar copia de volumen:Creamos el archivo `vss.dsh` en nuestro host de ataque:Paso 2: Transferir archivos necesarios al host víctima:💾 Extracción de la base de datos NTDSPaso 3: Ejecutar script VSS para crear copia de volumen:![](../../../../~gitbook/image.md)Paso 4: Cargar módulos PowerShell y extraer archivos críticos:![](../../../../~gitbook/image.md)Paso 5: Descargar archivos extraídos:
-####🔓 Extracción de Hashes
+#### 🔓 Extracción de Hashes
 Utilizamos `impacket-secretsdump` para extraer todos los hashes del dominio:![](../../../../~gitbook/image.md)🎯 Hashes extraídos exitosamente, incluyendo el hash del Administrator:- `Administrator:[REDACTED]:[REDACTED]:::`
 
-###👑 Acceso Administrativo
+### 👑 Acceso Administrativo
 
-####🔑 Pass-the-Hash Attack
+#### 🔑 Pass-the-Hash Attack
 Utilizamos el hash NTLM del Administrator para ganar acceso completo via WinRM:
-####🏆 Root Flag
-Last updated 9 months ago- [📝 Descripción](#descripcion)
+#### 🏆 Root Flag
+
 - [🎯 Puntos Clave](#puntos-clave)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración de Servicios](#enumeracion-de-servicios-1)

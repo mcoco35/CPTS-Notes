@@ -3,38 +3,38 @@
 ![](../../../../~gitbook/image.md)Publicado: 12 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Sea es una máquina vulnerable de Hack The Box que presenta varios desafíos de seguridad web e infraestructura. La máquina involucra:- Enumeración de servicios web
 - Explotación de una vulnerabilidad de Cross-Site Scripting (XSS) en WonderCMS
 - Escalada de privilegios mediante técnicas de enumeración y abuso de servicios internos
 
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP (sea.htb)
+#### 80 HTTP (sea.htb)
 ![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)⚠️ Importante: Al intentar acceder a la sección de contacto, vemos que la peticición se dirige a un vhost `sea.htb` que deberemos añadir a nuestro fichero /etc/hosts para su resolución:![](../../../../~gitbook/image.md)Activamos el interceptor de Burp y capturamos la petición del formulario:![](../../../../~gitbook/image.md)Probamos algunas inyecciones XSS sin resultado.🕷️Fuzzing de directoriosHaciendo fuzzing de directorios de forma recursiva con la herramienta ferxobuster encontramos un par de archivos que puede que nos aporten más información sobre algún posible vector de ataque:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Revisando el código fuente del proyecto en el repositorio oficial de github vemos que también existe un fichero `README.md`![](../../../../~gitbook/image.md)http://sea.htb/themes/bike/README.md![](../../../../~gitbook/image.md)Este fichero nos aporta información relevante sobre que estamos ante CMS llamado WonderCMS v.3.2.0 a v.3.4.2 permite a un atacante remoto ejecutar código arbitrario a través de un script manipulado y cargado en el componente installModule mediante una vulnerabilidad de Cross Site Scripting.https://nvd.nist.gov/vuln/detail/CVE-2023-41425
-###💻 Explotación
+### 💻 Explotación
 
-####🔓 CVE-2023-41425
+#### 🔓 CVE-2023-41425
 Existen varios exploits públicos que permiten explotar esta vulnerabilidad:https://github.com/duck-sec/CVE-2023-41425Esta exploit abusa de la vulnerabilidad XSS del campo loginURL del CMS:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)El script nos genera la petición que deberemos proporcionar al administrador del sitio para robar su cookie de sesión y realizar la inyección:Para ello nos vamos a servir del campo Website del formulario, el cual generará un hipervínculo y confiaremos en que el administrador que lo reciba haga click en él.![](../../../../~gitbook/image.md)En pocos segundos veremos como se realiza la petición al recurso malicioso:![](../../../../~gitbook/image.md)Y recibimos la reverse shell en nuestro host de ataque:![](../../../../~gitbook/image.md)
-####Mejorando la shell
+#### Mejorando la shell
 En nuestro host de ataqueEn el host comprometido
-####FootHold
+#### FootHold
 Enumeramos el sistema y vemos que existen 2 usuarios en el directorio /home, pero no podemos leer la primera flag en el directorio del usuario amay:Encontramos un archivo llamado database.js en /var/www/sea/data que contiene un hash.Nota: Aquí es importante revisar que se están usando caracteres para escapar la /, por lo que esto hay que tenerlo en cuenta ya que el hash tal como está no podemos intentar crackearlo, debemos eliminar previamente los caracteres ""![](../../../../~gitbook/image.md)Ahora verificamos si está llevando a cabo la mala praxis de reutilización de contraseñas para alguno de los usuarios que hemos enumerado anteriormente (amay o geo):Logramos autenticarnos como amay para obtener la primera flag:![](../../../../~gitbook/image.md)
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Comprobamos si el usuario amay puede ejecutar algún comando como sudo:Verificamos que la contraseña anterior tampoco es válida para el usuario geo:No vemos que el usuario tenga ningún grupo interesante o que nos permita un posible vector para la escaladaVemos si hay algún binario con privilegios SUID que pueda resultar interesante pero tampoco vemos nada:Enumeramos la versión del sistema operativo pero nada interesante tampocoVemos si hay alguna capability interesante pero tampoco vemos nada:Enumeramos servicios en ejecución y vemos un servicio ejecutándose en el puerto 8080. Este servicio parece estar ejecutándose de forma local ya que anteriormente en nuestra enumeración de puertos y servicios vimos que había únicamente dos servicios, 22 y 80.![](../../../../~gitbook/image.md)Dado que tenemos la contraseña del usuario amay, podemos verificar si podemos conectarnos vía ssh con estas credenciales y vemos que sí:![](../../../../~gitbook/image.md)En este punto se me ocurre que podemos realizar port forwading del puerto 8080 a nuestro host de ataque usando para ello el puerto ssh:A continuación desde nuestro host de ataque accedemos a este servicio y encontramos un panel de autenticación HTTP básica. Al probar con las credenciales amay:mychemicalromance logramos acceder:)![](../../../../~gitbook/image.md)
-###Explotación
+### Explotación
 No hallamos nada relevante a priori, pero sí que hay un combo que permite seleccionar el archivo del cuál quieres leer el log, vamos a revisar cómo se está realizando la petición interceptándola con Burp Suite y comprobamos que el parámetro log_file no está debidamente sanitizado y que es vulnerable a path traversal:![](../../../../~gitbook/image.md)Sin embargo no podemos leer otros archivos, parece que se está aplicando algún tipo de filtrado. Podemos usar el carácter ; en combinación con # para evadir estos filtros de la siguiente forma:![](../../../../~gitbook/image.md)De esta forma vemos que además de listar el contenido del fichero /etc/passwd también se ejecuta el comando whoami.Podríamos aprovechar esto para ganar una reverse shell de la siguiente forma:Aunque necesitaremos codificarla como URLIniciamos el listener y a continuación lanzamos la petición:![](../../../../~gitbook/image.md)
-####Opción alternativa, sin usar reverse shell
+#### Opción alternativa, sin usar reverse shell
 Como alternativa, podemos generar un par de claves ssh usando la herraienta ssh-keygen sin definir contraseña:A continuación, disponibilizamos el archivo de clave pública id_rsa.pub en un servidor web con python en nuestro host de ataque:A continuación usando curl o wget, descargarmos el archivo .pub en el directorio /root/.ssh/authorized_keys![](../../../../~gitbook/image.md)Si todo ha ido bien, deberíamos poder conectarnos como root al host víctima sin indicar contraseña:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)
 - [🔭 Reconocimiento](#reconocimiento)

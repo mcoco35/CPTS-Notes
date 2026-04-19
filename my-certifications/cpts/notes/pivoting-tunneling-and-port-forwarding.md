@@ -1,6 +1,6 @@
 # Pivoting-tunneling-and-port-forwarding
 
-####Network Configuration and Monitoring
+#### Network Configuration and Monitoring
 
 ```
 # Display network configurations
@@ -22,34 +22,34 @@ netstat -antb | findstr 1080
 ### Windows: List TCP connections on port 1080.
 ```
 
-####Nmap
+#### Nmap
 
-####SSH and Tunneling
+#### SSH and Tunneling
 
-####Proxychains
+#### Proxychains
 
-####Metasploit
+#### Metasploit
 
-####File Transfer
+#### File Transfer
 
-####Metasploit Payloads
+#### Metasploit Payloads
 
-####Socat
+#### Socat
 
-####Plink
+#### Plink
 
-####SSHuttle
+#### SSHuttle
 
-####RPivot
+#### RPivot
 
-####DNScat2
+#### DNScat2
 
-####Chisel
+#### Chisel
 
-####Ptunnel-ng
+#### Ptunnel-ng
 
-####Windows PortProxy
-Last updated 10 months ago
+#### Windows PortProxy
+
 ```
 # Basic port scanning
 nmap -sT -p22,3306

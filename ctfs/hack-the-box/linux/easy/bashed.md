@@ -2,9 +2,9 @@
 
 ![](../../../../~gitbook/image.md)Publicado: 27 de Mayo de 2025Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Bashed es una máquina Linux de dificultad fácil que simula un escenario realista de pentesting. La máquina presenta un servidor web Apache que aloja una página de desarrollo donde se menciona la herramienta phpbash, una consola web semi-interactiva diseñada para facilitar las pruebas de penetración.
-####Objetivos de aprendizaje:
+#### Objetivos de aprendizaje:
 - Reconocimiento web: Identificación y enumeración de servicios HTTP
 - Fuzzing de directorios: Descubrimiento de recursos ocultos en aplicaciones web
 - Explotación de herramientas web: Uso de phpbash para obtener acceso inicial
@@ -12,31 +12,31 @@ Bashed es una máquina Linux de dificultad fácil que simula un escenario realis
 - Escalada de privilegios vertical: Dos métodos diferentes para obtener acceso root:Explotación de vulnerabilidades del kernel (CVE-2017-16995)
 - Abuso de tareas programadas (cron jobs)
 
-####Escenario:
+#### Escenario:
 La máquina simula un entorno de desarrollo donde un desarrollador ha dejado expuesta una herramienta de testing (phpbash) que permite la ejecución remota de comandos. A través de una configuración incorrecta de permisos sudo y tareas programadas mal aseguradas, es posible escalar privilegios hasta obtener acceso completo al sistema.Esta máquina es ideal para principiantes que quieren aprender los fundamentos del pentesting web y la escalada de privilegios en sistemas Linux, proporcionando múltiples vectores de ataque y técnicas de explotación comunes en el mundo real.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 http://10.10.10.68![](../../../../~gitbook/image.md)
 Al acceder al servicio http del puerto 80 encontramos una web que habla de phpbash aunque no vemos gran cosa a priori.phpbash es una consola web independiente y semiinteractiva. Su principal objetivo es facilitar las pruebas de penetración donde las consolas inversas tradicionales no son posibles.Para que phpbash funcione correctamente, Javascript debe estar habilitado en el navegador del cliente. El equipo de destino también debe permitir la ejecución de la  función `shell_exec` de PHP, aunque es muy sencillo modificar el script para usar una función alternativa.
-####Fuzzing de directorios
+#### Fuzzing de directorios
 Realizamos fuzzing de directorios y encontramos algunos recursos que podrían ser interesante analizar:Descubrimos en el recurso /dev está alojada la phpbash que se menciona en la web:![](../../../../~gitbook/image.md)Basta con acceder a http://10.10.10.68/dev/phpbash.php y podemos usar dicha funcionalidad:![](../../../../~gitbook/image.md)Dado que estamos dentro de un php bash, podemos intentar usar una reverse shell para conectarnos a nuestro host de ataque.Primero probamos con una bash reverse shell one liner pero parece que todo lo que tenga que ver con bash se filtra. Así usamos una php reverse shell de pentest monkey la disponibilizamos en nuestro host de ataque usando un servidor web en python:rev.phpA continuación la descargamos en la carpeta /uploads de la máquina:Iniciamos un listener con netcat en nuestro host de ataque:Accedemos a http://10.10.10.68/uploads/rev.php para lanzar la reverse shell y ganar acceso al host:![](../../../../~gitbook/image.md)
-####Mejora del tratamiento de la TTY
+#### Mejora del tratamiento de la TTY
 
-####Initial foothold
+#### Initial foothold
 Enumeramos los usuarios del directorio /home y obtenemos la primera flag:
-####Escalada de privilegios a root
+#### Escalada de privilegios a root
 Verificamos si hay algún comando que pueda ser ejecutado con más privilegio y comprobamos que el usuario www-data puede ejecutar cualquier comando como el usuario scriptmanager sin que se requiera la contraseña:Es decir, podríamos autenticarnos como usuario scriptmanager haciendo lo siguiente:Enumeramos la máquina y así a priori, revisando la versión del kernel vemos algo interesante:Una pequeña búsqueda nos permite encontrar varios exploits para el CVE: CVE-2017-16995https://github.com/rlarabee/exploits/blob/master/cve-2017-16995/cve-2017-16995.c
 https://www.exploit-db.com/exploits/41458El exploit está escrito en C y requiere ser compilado, pero no tenemos gcc en la máquina comprometida:Compilamos el exploit en nuestro host de ataque usando la flag --static para compilar el binario con todas las dependencias incluidas, por lo que no dependerá de la versión de glibc del sistema donde se ejecute. Ojo: esto puede aumentar mucho el tamaño del binarioA continuación lo transferimos usando un servidor web en pythonFinalmente ejecutamos el exploit y ganamos acceso como root
-####Escalada a root mediante mediante script
+#### Escalada a root mediante mediante script
 Buscamos en la máquina archivos cuyo propietario sea scriptmanager y excluimos de los resultados aquellos que estén relacionados con proc que no me interesan:![](../../../../~gitbook/image.md)Nos sale un directorio y un script que podría ser interesanteSi revisamos los permisos, vemos que scriptmanager es el propietario el script test.pyRevisando el contenido del script en python vemos que básicamente lo que hace es crear un archivo con nombre test.txt y escribe sobre él.Es probable que haya una tarea programada que haga que root ejecute el test.py y cree el archivo test.txt, ya que el propietario es root.¿Cómo podemos verificar esto? Podemos crearnos un script en bash que monitorice esto o usando pspy:Le damos permisos de ejecución y lanzamosTras unos segundos de espera vemos algo interesante:![](../../../../~gitbook/image.md)
 Vemos que hay una tarea programada que hace root vaya al directorio /scripts y mediante un bucle busque todos aquellos scripts que tienen extensión .py y los lance.¿Cómo podríamos abusar de esto ahora que sabemos que root ejecuta el script test.py?
 Existen varias formas, pero una sería usar por ejemplo la librería os de python y mediante una llamada al sistema asignar permisos SUID a la /bin/bash:test.pyTranscurridos unos segundos vemos como root ha ejecutado el script y ha cambiado el permiso de /bin/bash para que tenga el bit SUID:![](../../../../~gitbook/image.md)Ahora ya podríamos concedernos el privilegio como root lanzando simplemente el comando:Last updated 10 months ago- [📝 Descripción](#descripcion)
@@ -246,7 +246,7 @@ f.close
 ```
 
 ```
-#!/bin/bash
+# !/bin/bash
 
 old_process="$(ps -eo user,command)"
 

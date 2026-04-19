@@ -1,8 +1,8 @@
 # SQL-injection
 
-####MySQL Command Reference
+#### MySQL Command Reference
 
-####General
+#### General
 
 ```
 mysql -u root -h docker.hackthebox.eu -P 3306 -p  -- Login to MySQL database.
@@ -10,7 +10,7 @@ SHOW DATABASES;  -- List available databases.
 USE users;  -- Switch to a database.
 ```
 
-####Tables
+#### Tables
 
 ```
 CREATE TABLE logins (id INT, ...);  -- Add a new table.
@@ -21,7 +21,7 @@ INSERT INTO table_name(column2, ...) VALUES (column2_value, ..);  -- Add values 
 UPDATE table_name SET column1=newvalue1, ... WHERE ;  -- Update table values.
 ```
 
-####Columns
+#### Columns
 
 ```
 SELECT * FROM table_name;  -- Show all columns in a table.
@@ -33,9 +33,9 @@ ALTER TABLE logins MODIFY oldColumn DATE;  -- Change column datatype.
 ALTER TABLE logins DROP oldColumn;  -- Delete a column.
 ```
 
-####Output
+#### Output
 
-####MySQL Operator Precedence
+#### MySQL Operator Precedence
 - Division (/), Multiplication (*), and Modulus (%)
 - Addition (+) and Subtraction (-)
 - Comparison (=, >, <, <=, >=, !=, LIKE)
@@ -43,21 +43,21 @@ ALTER TABLE logins DROP oldColumn;  -- Delete a column.
 - AND (&&)
 - OR (||)
 
-####SQL Injection Techniques
+#### SQL Injection Techniques
 
-####Auth Bypass
+#### Auth Bypass
 
-####Auth Bypass Payloads
+#### Auth Bypass Payloads
 - Use variations based on the application's response to refine bypass strategies.
 
-####Union Injection
+#### Union Injection
 
-####DB Enumeration
+#### DB Enumeration
 
-####Privileges
+#### Privileges
 
-####File Injection
-Last updated 10 months ago
+#### File Injection
+
 ```
 SELECT * FROM logins ORDER BY column_1;  -- Sort by column.
 SELECT * FROM logins ORDER BY column_1 DESC;  -- Sort by column in descending order.

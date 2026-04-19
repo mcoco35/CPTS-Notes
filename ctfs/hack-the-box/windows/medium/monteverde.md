@@ -4,52 +4,52 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Monteverde es una máquina Windows de dificultad media que simula un entorno corporativo con Active Directory. La explotación involucra enumeración exhaustiva de servicios SMB y LDAP para descubrir usuarios válidos, seguido de un ataque de password spraying que revela credenciales débiles. Una vez dentro, se descubren credenciales adicionales en archivos de configuración de Azure AD Connect. La escalada de privilegios se logra aprovechando una vulnerabilidad en Azure AD Sync que permite extraer credenciales del administrador de dominio desde la base de datos local.Esta máquina es excelente para practicar técnicas de enumeración de Active Directory, password spraying, y explotación de servicios de sincronización de Azure.
-###🎯 Puntos Clave
+### 🎯 Puntos Clave
 - Enumeración exhaustiva de Active Directory: Uso de herramientas como enum4linux, netexec y windapsearch
 - Password Spraying: Aprovechamiento de políticas de contraseñas débiles sin bloqueo de cuentas
 - Credenciales en archivos de configuración: Descubrimiento de credenciales en azure.xml
 - Azure AD Connect vulnerability: Explotación de AdSyncDecrypt para extraer credenciales de administrador
 - Lateral movement: Escalada de privilegios a través de grupos especiales como Azure Admins
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 PuertoServicioDescripción53DNSSimple DNS Plus88KerberosAutenticación de dominio389/3268LDAPActive Directory LDAP445SMBRecursos compartidos5985WinRMPowerShell Remoting
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ 445 SMB
+#### 🗂️ 445 SMB
 Dado que no tenemos credenciales de cuentas locales ni usuarios de domino, tratamos primero de enumerar el servicio SMB haciendo uso de una sesion nula:Primero probamos con smbclient y aunque logramos autenticarnos de forma anónima no logramos enumerar recursos.Haciendo uso de la herramienta enum4linux tampoco logramos enumerar recursos compartidos aunque sí somos capaces de enumerar usuarios, cuentas de dominio, políticas y grupos:👥 Usuarios enumerados🔐 Política de contraseñas⚠️ Importante: No hay threshold de bloqueo de cuentas, lo que permite password spraying.👑 Grupos de dominio importantesEnumeramos usuarios con netexec en el servicio SMB:![](../../../../~gitbook/image.md)
-####🗂️ 389 LDAP
+#### 🗂️ 389 LDAP
 Usamos la herramienta netexec para tratar de enumerar usuarios de forma anónima contra ldap:Afinamos un poco el comando para quedarnos con los usuarios y volcarlos a un fichero de texto:![](../../../../~gitbook/image.md)
-####🎯 Verificación AS-REP Roasting
+#### 🎯 Verificación AS-REP Roasting
 Verificamos si alguno de los usuarios obtenidos no tiene habilitada la pre-autenticación de kerberos y podemos realizar un ataque de tipo AS-Rep Roasting y obtener su hash, pero no es el caso:
-####🔍 Enumeración avanzada con Windapsearch
+#### 🔍 Enumeración avanzada con Windapsearch
 📋 Usuarios del dominioLa salida devuelve algunos usuarios interesantes. SABatchJobs podría ser una cuenta de servicio dedicada a ejecutar trabajos por lotes de , y es quizás inusual por tener un nombre mixto. La presencia de la cuentaAAD_987d7f2f57d2 es un claro indicio de que AD Connect está instalado en el dominio. AD Connect es una herramienta que se utiliza para sincronizar un entorno de Active Directory local con Azure Active Directory.🎯 Grupo Remote Management UsersUsando windapsearch podemos enumerar más grupos de dominio, y ver qué usuarios pertenecen a Remote Management Users . Este grupo permite a sus miembros conectarse a equipos utilizando PowerShell Remoting.Ahora que sabemos que tenemos un usuario que pertenece al Remote Management Users group, podemos intentar realizar password spraying. Tal como descubrimos durante la enumeración del servicio SMB con la herramienta enum4linux, hay una política de contraseñas en la que no hay bloqueo por número de intentos:![](../../../../~gitbook/image.md)Usamos windapsearch para crear una lista de usuario para realizar password spraying:![](../../../../~gitbook/image.md)Resultado importante: `mhope` pertenece al grupo Remote Management Users, lo que significa que puede conectarse vía WinRM.
-###💥 Explotación
+### 💥 Explotación
 
-####🔫 Password Spraying
+#### 🔫 Password Spraying
 Creamos lista de usuarios:Descargamos diccionario de contraseñas débiles y añadimos los nombres de usuario:Ejecutamos password spraying:![](../../../../~gitbook/image.md)🎉 Credenciales encontradas: `SABatchJobs:SABatchJobs`
-####📂 Enumeración de recursos SMB autenticado
+#### 📂 Enumeración de recursos SMB autenticado
 ![](../../../../~gitbook/image.md)Conectamos al recurso `users$`:En el directorio de `mhope` encontramos `azure.xml`:![](../../../../~gitbook/image.md)🔑 Credenciales adicionales encontradas: `mhope:4n0therD4y@n0th3r$`
-####🖥️ Acceso inicial vía WinRM
+#### 🖥️ Acceso inicial vía WinRM
 ![](../../../../~gitbook/image.md)🏁 Primera flag obtenida: `user.txt`
-###⬆️ Escalada de Privilegios
+### ⬆️ Escalada de Privilegios
 
-####🔍 Enumeración del sistema
+#### 🔍 Enumeración del sistema
 Descubrimos que:- Microsoft Azure AD Sync está instalado
 - El usuario `mhope` pertenece al grupo `Azure Admins`
 ![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🔓 Explotación de Azure AD Sync
+#### 🔓 Explotación de Azure AD Sync
 Esta combinación presenta una vulnerabilidad que permite extraer credenciales del administrador de dominio.📥 Preparación de herramientasDescargamos AdDecrypt:Subimos `AdDecrypt.exe` y `mcrypt.dll` a la máquina víctima.🎯 Extracción de credencialesNavegamos al directorio de Azure AD Sync:Ejecutamos AdDecrypt:![](../../../../~gitbook/image.md)🎉 Credenciales de administrador obtenidas:
-####👑 Acceso como administrador
+#### 👑 Acceso como administrador
 🏆 Flag root obtenida: `root.txt`Last updated 9 months ago- [📝 Descripción](#descripcion)
 - [🎯 Puntos Clave](#puntos-clave)
 - [🔭 Reconocimiento](#reconocimiento)

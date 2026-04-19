@@ -1,6 +1,6 @@
 # Scan-network-with-nmap
 
-###Nmap Scan
+### Nmap Scan
 
 ```
 nmap -sn $ip
@@ -37,46 +37,42 @@ nmap -Pn -sS -sV -p- --data-length 200 -D $gatewayip,$gatewayip $ip
 ```
 Decoy scan with packet padding
 Uses decoys to obscure the real scanner and adds random data to packets.
-###🔹 Flags for Better Results
+### 🔹 Flags for Better Results
 
-####🚀 Scan Types
+#### 🚀 Scan Types
 - `-sA` → TCP ACK scan
 - `-sS` → TCP SYN scan
 - `-sT` → TCP connect scan
 
-####🔍 Host & Network Discovery
+#### 🔍 Host & Network Discovery
 - `PE` → Ping scan using ICMP ECHO request
 - `--disable-arp-ping` → Disable ARP ping
 
-####📡 Packet Handling & Output
+#### 📡 Packet Handling & Output
 - `--packet-trace` → Show all packets sent and received
 - `--reason` → Display the reason for specific results
 
-####🔢 Port Scanning
+#### 🔢 Port Scanning
 - `--top-ports=10` → Scan the top 10 most frequent ports
 - `-p22` → Scan a specific port (e.g., port 22)
 - `-F` → Scan the top 100 ports
 
-####🛡️ Spoofing & Stealth Techniques
+#### 🛡️ Spoofing & Stealth Techniques
 - `-D RND:5` → Generate 5 random decoy IP addresses
 - `-S <IP>` → Set a specific source IP address
 - `-e tun0` → Send requests through a specific network interface
 - `--source-port 53` → Scan using a specific source port (e.g., `53`)
 
-###🎯 Optimizing Nmap Scans
+### 🎯 Optimizing Nmap Scans
 Reducing scan time can help evade IDS detection, while increasing speed may appear suspicious.
-####🕒 Timing & Performance Tweaks
+#### 🕒 Timing & Performance Tweaks
 - `--host-timeout 5s` → Set a timeout for each host (e.g., 5 seconds)
 - `--scan-delay 5s` → Delay between scan attempts (e.g., 5 seconds)
 - `--initial-rtt-timeout 50ms` → Set the initial RTT timeout
 - `--max-rtt-timeout 100ms` → Set the max RTT timeout
 
-###📂 Nmap Output Formats
+### 📂 Nmap Output Formats
 - `-oN <filename>` → Save as normal text file
 - `-oX <filename>` → Save as XML file
 - `-oS <filename>` → Save as script (for Metasploit)
 - `-oA <basename>` → Save in all formats (`.nmap`, `.xml`, `.gnmap`)
-Last updated 10 months ago- [Nmap Scan](#nmap-scan)
-- [🔹 Flags for Better Results](#flags-for-better-results)
-- [🎯 Optimizing Nmap Scans](#optimizing-nmap-scans)
-- [📂 Nmap Output Formats](#nmap-output-formats)

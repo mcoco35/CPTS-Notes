@@ -3,34 +3,34 @@
 ![](../../../../~gitbook/image.md)Publicado: 25 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Irked es una máquina Linux de dificultad Easy que presenta múltiples vectores de ataque interesantes. La explotación inicial se basa en una backdoor conocida en UnrealIRCd 3.2.8.1, que permite la ejecución remota de comandos. Para obtener acceso al usuario, se requiere el uso de técnicas de esteganografía para extraer credenciales ocultas en una imagen. La escalada de privilegios se logra mediante la explotación de un binario personalizado con permisos SUID que puede ser manipulado a través de Path Hijacking.Esta máquina es excelente para practicar:- Enumeración de servicios IRC
 - Explotación de backdoors conocidas
 - Técnicas de esteganografía básica
 - Escalada de privilegios mediante SUID y Path Hijacking
 - Análisis de binarios con herramientas como `strings`
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 ![](../../../../~gitbook/image.md)Realizamos fuzzing de directorios con feroxbuster pero no vemos mucho más que rascar aquí.
-####6697 UnrealIRC
+#### 6697 UnrealIRC
 Buscamos sobre formas de enumerar este servicio y encontramos esta documentación de nmap:https://nmap.org/nsedoc/scripts/irc-unrealircd-backdoor.htmlExiste un script de nmap para verificar si es una versión backdorizable de unrealircd![](../../../../~gitbook/image.md)Ejecutamos nmap con este script contra los puertos del servicio unrealircd:Nos confirma que parece que se trata de una versión troyanizada![](../../../../~gitbook/image.md)
-###💻 Explotación
+### 💻 Explotación
 Buscamos un exploit y lo descargamosEditamos la ip y el puerto en el código del script para usar los de nuestro host de ataque:![](../../../../~gitbook/image.md)Ejecutamos el exploit y ganamos acceso al sistema:![](../../../../~gitbook/image.md)
-####Mejora de la shell
+#### Mejora de la shell
 
-####Initial foothold
+#### Initial foothold
 Enumeramos los usuarios de la máquina y vemos que hay dos djmardov y ircdLa primera flag se encuentra en el usuario djmardov pero no tenemos permisos:![](../../../../~gitbook/image.md)En el directorio Documents del usuario djmardov encontramos un archivo oculto llamado backup que contiene una contraseña:![](../../../../~gitbook/image.md)Verificamos si el usuario djmardow está reutilizándola e intentamos autenticarnos con ella pero no funciona.Prestamos especial atención al mensaje junto a la contraseña "Super elite steg backup pw" podría dar a entender que se está usando steganografía, recordemos que vimos una imagen en el servicio del puerto 80:![](../../../../~gitbook/image.md)Vamos a descargarla y revisar con alguna herramienta como steghide si tiene algo oculto especificando la contraseña obtenida anteriormente:![](../../../../~gitbook/image.md)Parece que había un fichero oculto llamado pass.txt en la imagen con una contraseña:![[Pasted image 20250525135448.png]]![](../../../../~gitbook/image.md)Logramos autenticarnos con ella con el usuario djmardov y obtener la primera flag:
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Buscamos archivos con permisos SUIDVemos uno poco común que merece la pena analizar:![](../../../../~gitbook/image.md)La ejecutamos y encontramos un banner donde se indica que la aplicación que se usa para establecer y ver permisos de usuario y que aún está en desarrollo. Dado que es un binario, probamos a usar strings para ver qué comandos se están usando:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)El bit SUID está configurado para este archivo. ¿Qué significa eso? Significa que se ejecutará con el nivel de privilegio que coincida con el usuario que posee este archivo. Dado que el archivo es propiedad de root, el archivo se ejecutará con privilegios de root.Vamos a crear un archivo en /tmp/listusers y hacemos que ejecuta una bash shell:![](../../../../~gitbook/image.md)Ya somos root y podemos obtener la flag.Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)

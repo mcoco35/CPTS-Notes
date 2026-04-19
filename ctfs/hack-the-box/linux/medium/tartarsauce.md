@@ -3,35 +3,35 @@
 ![](../../../../~gitbook/image.md)Publicado: 17 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 TartarSauce es una máquina Linux de dificultad media que presenta múltiples vectores de ataque a través de aplicaciones web. El objetivo es explotar vulnerabilidades en varios servicios web para obtener acceso inicial y luego escalar privilegios mediante una tarea cron que ejecuta un script de backup inseguro. La máquina simula un entorno realista donde el atacante debe encadenar varias técnicas para lograr comprometer completamente el sistema, desde la enumeración de directorios hasta la explotación de un plugin vulnerable de WordPress y finalmente manipular un script de backup con privilegios elevados para obtener acceso como root.La máquina contiene un servidor web Apache que aloja múltiples aplicaciones, incluyendo un WordPress y un CMS Monstra, cada uno con sus propias vulnerabilidades. La parte más interesante está en la escalada de privilegios, que requiere una comprensión profunda del funcionamiento de un script de backup personalizado y la capacidad de aprovechar una ventana de tiempo específica para manipular archivos y obtener información sensible.Esta máquina es excelente para practicar:- Enumeración web exhaustiva
 - Explotación de plugins de WordPress (RFI)
 - Técnicas de escalada de privilegios con tareas cron
 - Race conditions y manipulación de archivos temporales
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 http://10.10.10.88/![](../../../../~gitbook/image.md)A través del fichero robots.txt logamos enumerar algunos recursos de forma manual:http://10.10.10.88/robots.txt🕷️Fuzzing de directoriosVeamos qué logramos enumerar realizando fuzzing de directorios de manera automatizada con herramientas feroxbuster y dirsearch:![](../../../../~gitbook/image.md)Encontramos varias rutas interesantes:http://10.10.10.88/webservices/monstra-3.0.4/admin/![](../../../../~gitbook/image.md)Enumeramos un panel de login que parece tener detrás un CMS llamado Monstra en la versión 3.0.4. Esta versión parece vulnerable a RCE:![](../../../../~gitbook/image.md)Probamos con las credenciales básicas `admin:admin` y logramos acceder. Tenemos las credenciales, estamos en disposición de usar el exploit anterior para explotar un RCE de la siguiente forma:Básicamente consiste en crear un archivo con extensión .php7 con el siguiente contenido y subirlo a través del módulo de subida de archivos![](../../../../~gitbook/image.md)Tras probar con diversas extensiones siempre obtenemos el mismo error:![](../../../../~gitbook/image.md)Por lo que parece que es un punto muerto o rabbit hole y debemos seguir buscando otro vector de ataque:http://10.10.10.88/webservices/wp/![](../../../../~gitbook/image.md)Observamos que no está cargando correctamente el contenido (probablemente porque se esté aplicando vhosting) así que revisamos el código fuente:![](../../../../~gitbook/image.md)Añadimos el vhost tartarsauce.htb a nuestro fichero /etc/hosts y recargamos la página![](../../../../~gitbook/image.md)Enumerando manualmente observamos en el código fuente que el wordpress está usando un tema llamado voce.![](../../../../~gitbook/image.md)Y la versión de wordpress es la 4.9.4![](../../../../~gitbook/image.md)También descubrimos accediendo a la ruta:
 http://tartarsauce.htb/webservices/wp/index.php/wp-json/wp/v2/users/ un usuario llamado wpadmin:![](../../../../~gitbook/image.md)Automatizamos esto es un poco usando la herramienta wp-scan y confirmamos la información anterior:Parece que no está logrando enumerar plugins, usando la flag "para intentar realizar un escaneo más agresivo:Vemos además que este wordpress tiene habilitado xmlrpc, lo cual nos permite realizar ataques de fuerza bruta contra el panel de login.También hemos logrado enumerar un usuario wp-admin que confirmamos que existe al intentar usarlo el panel de login:
 http://tartarsauce.htb/webservices/wp/wp-login.php![](../../../../~gitbook/image.md)Al estar habilitado xmlrpc, intentamos un ataque de fuerza bruta aunque no tenemos éxito:Verificamos si alguno de los plugins enumerados anteriormente es vulnerable y encontramos que la versión 1.5.3 de gwolle-gb sí lo es:![](../../../../~gitbook/image.md)
-###💻 Explotación
+### 💻 Explotación
 
-####CVE-2015-8351
+#### CVE-2015-8351
 Para llevar a cabo la explotación usaremos el siguiente exploit:https://github.com/G4sp4rCS/exploit-CVE-2015-8351Descargamos el exploit y le damos permisos de ejecuciónCopiamos una php shell de pentestmonkey que usaremos para explotar el RFI:Establecemos el puerto y la ip de nuestro host atacante en la php reverse shell.Disponibilizamos la php reverse shell en nuestro host de ataque mediante un servidor web en python:A continuación iniciamos un listener en el puerto especificado en nuestro host de ataque:Lanzamos el exploitObservamos que nos falla porque espera que el nombre del archivo .php se llame wp-load.php así que renombramos nuestra reverse shell para que tenga ese mismo nombre y relanzamos el exploit![](../../../../~gitbook/image.md)
-####Foothold
+#### Foothold
 Ganamos acceso a la máquina:
-####Mejora de la shell
+#### Mejora de la shell
 Enumeramos un directorio usuario llamado onuma aunque no tenemos permisos para ver su contenido.Verificamos si el usuario www-data puede ejecutar algún comando como sudo:Vemos que aunque no puede ejecutar ningún comando como super usuario, sí que puede ejecutar uno como usuario onuma sin que tenga que especificar la contraseña:https://gtfobins.github.io/gtfobins/tar/#sudoEscalamos a usuario onuma usando el siguiente comando:Una vez que ya somos onuma podemos leer la primera flag:
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Enumeramos la máquina para ver si podemos encontrar algo que nos permita movernos lateralmente y/o escalar privilegios. Sabemos que hay una aplicación wordpress instalada, por lo que revisamos el directorio `/var/www/html/webservices/wp`y encontramos credenciales en el fichero wp-config.phpParece otro callejón sin salida ya que esta contraseña no nos sirve para conectarnos a la base de datos ni tampoco para usarla como usuario root.Continuamos enumerando y encontramos algo interesante en el directorio /var/backups![](../../../../~gitbook/image.md)Parece que hay una herramienta que el usuario onuma está usando llamado backuperer.Buscamos referencias a este archivo![](../../../../~gitbook/image.md)Revisamos el contenido de este scriptA continuación repasaremos las partes más importantes del script- Ejecutar `/bin/tar`como `onuma`y hacer una copia de seguridad `$basedir`en un archivo tar comprimido con gzip llamado`$tmpfile`
 - `$basedir`y `$tmpfile`se definen en las variables en la parte superior del script
 - `$basedir`se define como`/var/www/html`
@@ -393,14 +393,14 @@ grep -ilr backuperer / 2>/dev/null
 ```
 onuma@TartarSauce:/var/backups$ cat /usr/sbin/backuperer
 
-#!/bin/bash
+# !/bin/bash
 
-#-------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------
 # backuperer ver 1.0.2 - by ȜӎŗgͷͼȜ
 # ONUMA Dev auto backup program
 # This tool will keep our webapp backed up incase another skiddie defaces us again.
 # We will be able to quickly restore from a backup in seconds ;P
-#-------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------
 
 # Set Vars Here
 basedir=/var/www/html

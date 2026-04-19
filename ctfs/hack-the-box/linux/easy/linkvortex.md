@@ -3,67 +3,67 @@
 ![](../../../../~gitbook/image.md)Publicado: 07 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Linkvortex es una máquina Linux de dificultad Easy de HackTheBox que presenta un CMS Ghost vulnerable (versión 5.58) con una vulnerabilidad de lectura arbitraria de archivos (CVE-2023-40028). La escalada de privilegios se realiza mediante la explotación de un script personalizado que procesa enlaces simbólicos de forma insegura.
-####🎯 Objetivos de Aprendizaje
+#### 🎯 Objetivos de Aprendizaje
 - Enumeración web y descubrimiento de subdominios
 - Explotación de repositorios Git expuestos
 - Aprovechamiento de vulnerabilidades en Ghost CMS
 - Lectura de archivos sensibles del sistema
 - Escalada de privilegios mediante manipulación de enlaces simbólicos
 
-####🏷️ Categorías
+#### 🏷️ Categorías
 - Web Exploitation
 - Information Disclosure
 - Git Repository Enumeration
 - Privilege Escalation
 - Symlink Attack
 
-####🛠️ Herramientas Utilizadas
+#### 🛠️ Herramientas Utilizadas
 - `nmap` - Escaneo de puertos y servicios
 - `dirsearch` / `feroxbuster` - Fuzzing de directorios
 - `ffuf` - Fuzzing de virtual hosts
 - `git_dumper` - Extracción de repositorios Git
 - Exploit CVE-2023-40028 para Ghost 5.58
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos TCP
+#### Escaneo de puertos TCP
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP (linkvortex.htb)
+#### 80 HTTP (linkvortex.htb)
 No encontramos gran cosa al enumerar el sitio de forma manual. La opción de registro no está implementada ni tampoco hay formularios en la web.![](../../../../~gitbook/image.md)
-####👻 Identificación de Ghost CMS
+#### 👻 Identificación de Ghost CMS
 Revisando el código fuente encontramos una etiqueta meta que hace referencia a Ghost 5.58![](../../../../~gitbook/image.md)Buscando información sobre este software encontré que es una aplicación para crear contenido, un CMS:
 https://ghost.org/Al buscar información sobre este software también encontré que había tenido vulnerabilidades y en concreto parece que tuvo una vulnerabilidad de tipo Arbitrary File Read en la versión 5.58:https://github.com/0xDTC/Ghost-5.58-Arbitrary-File-Read-CVE-2023-40028Pero echemos un ojo primero a ver si encontramos algo realizando fuzzing.
-####📂 Fuzzing de directorios
+#### 📂 Fuzzing de directorios
 Tras probar a realizar fuzzing de directorios con dirsearch y ferxobuster encontramos algunos recursos que añadir a nuestro scope:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Uno de ellos nos permite saber que hay un usuario admin, ya todos los post son de este usuario.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🔐 Panel de autenticación
+#### 🔐 Panel de autenticación
 Revisando el panel de login, nos pide una cuenta de correo como usuario. Si probamos con el nombre de usuario encontrado y el dominio vemos que parece ser válido, ya que si introducimos otro distinto el mensaje de error es diferente:http://linkvortex.htb/ghost![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Una opción a valorar sería usar hydra y un ataque de diccionario para ver si logramos la contraseña, pero como este probablemente sería un proceso largo, continuemos primero enumerando para ver si existen también otros subdominios.
-####🔧 Subdominio de desarrollo (dev.linkvortex.htb)
+#### 🔧 Subdominio de desarrollo (dev.linkvortex.htb)
 
-####Fuzzing de vhosts
+#### Fuzzing de vhosts
 Al realizr fuzzing de vhosts encontramos un subdominio llamado dev que procedemos a añadir a nuestro fichero /etc/hosts![](../../../../~gitbook/image.md)Al acceder encontramos que el sitio parece estar todavía en construcción![](../../../../~gitbook/image.md)
-####📂 Fuzzing del subdominio dev
+#### 📂 Fuzzing del subdominio dev
 Al realizar fuzzing sobre este subdominio encontramos un repositorio en git:![](../../../../~gitbook/image.md)
-####⬇️ Extracción del repositorio Git
+#### ⬇️ Extracción del repositorio Git
 Podemos usar la herramienta git_dumper para descargar el repositorio a nuestro host de ataque.![](../../../../~gitbook/image.md)
 El repositorio está en un estado un poco extraño:![](../../../../~gitbook/image.md)
 Actualmente no está en una rama, pero tiene dos archivos modificados pendientes de confirmación. Puedo ver la diferencia en cada uno de ellos usando git diff --cached. El Dockerfile.ghost es completamente nuevo:![](../../../../~gitbook/image.md)Vemos que hay un archivo de configuración en `/var/lib/ghost/config.production.json`
-####🗝️ Descubrimiento de credenciales
+#### 🗝️ Descubrimiento de credenciales
 Revisemos primero las diferencias del otro archivo que habíamos visto:![](../../../../~gitbook/image.md)La cosa se pone interesante porque aquí encontramos una contraseña. Vamos a probar esta contraseña `OctopiFociPilfer45` con la cuenta del usuario admin@linkvortex.htb y comprobemos si mereció la pena seguir enumerando en lugar de intentar el ataque de fuerza bruta con hydra:![](../../../../~gitbook/image.md)Estamos dentro! Esto se pone interesante, ya que el exploit que vimos para
-####💥 Explotación
+#### 💥 Explotación
 ![](../../../../~gitbook/image.md)Ahora probemos con la ruta del fichero que habíamos descubierto en el archivo de configuración del repositorio en git: /var/lib/ghost/config.production.json
-####🔐 Acceso SSH
+#### 🔐 Acceso SSH
 Encontramos una nueva credencial: bob@linkvortex.htb:fibber-talented-worth en lo que parece ser un servicio SMTP. Pero tal como vemos, este servicio no está expuesto.Lo único que nos queda verificar es si se puede estar reutilizando esta credencial en algún otro servicio, por ejemplo el servicio ssh:![](../../../../~gitbook/image.md)Ganamos acceso a la máquina como usuario bob y obtenemos la primer flag en su directorio de usuario.
-####🚀 Escalada de privilegios
+#### 🚀 Escalada de privilegios
 Verificamos si bob puede ejecutar algún comando como root:
-####📋 Análisis del script vulnerable
+#### 📋 Análisis del script vulnerable
 El script básicamente lo que hace es analizar un enlace simbólico (`symlink`) a una imagen `.png`, determinar si apunta a un archivo crítico (como algo en `/etc` o `/root`), y en ese caso eliminarlo o moverlo a cuarentena.Vamos paso a paso:Se define el directorio de cuarentena donde se moverán los enlaces sospechosos.Comprobación de variable opcional.- Si la variable de entorno `CHECK_CONTENT` no está definida, se le asigna el valor `false`.
 - Esta variable indica si se debe imprimir el contenido del archivo al que apunta el symlink.
 Captura del argumento introducido por el usuarioEn este if se valida la extensión del archivo que ha introducido el usuario.- Se verifica, usando `sudo`, si el archivo es un enlace simbólico (`-L`).
@@ -74,7 +74,7 @@ Se comprueba si el enlace apunta a ficheros críticos del sistema:- Si el destin
 - Imprime una advertencia y elimina el enlace simbólico con `unlink`.
 Si no apunta a un archivo sensible, se mueve a la carpeta de cuarentena (`/var/quarantined`).- Si `CHECK_CONTENT` está activado, intenta leer el contenido del archivo al que apuntaba el enlace.
 
-####🔗 Explotación mediante Symlink Attack
+#### 🔗 Explotación mediante Symlink Attack
 Primero, creamos un enlace simbólico (`symlink`) que apunte al archivo `/root/root.txt`:![](../../../../~gitbook/image.md)Con esto lo que estamos haciendo es crear un enlace simbólico llamado x3m1sec.txt que apunte al fichero /root/.ssh/id_rsa.txtRecordemos que el script requiere que el archivo que le indiquemos tenga extensión .png, por lo que creamos otro enlace simbólico![](../../../../~gitbook/image.md)- `ln -s /home/bob/x3m1sec.txt x3m1sec.png` → Creamos un segundo symlink (`x3m1sec.png`) que apunta a `x3m1sec.txt`, el cual a su vez apunta a `root.txt` logrando de esta forma evadir el filtro del script.
 Nos falta un paso todavía, ya que necesitamos que la variable esté inicializada. `CHECK_CONTENT=true`¿Qué pasa aquí?- `CHECK_CONTENT=true` → Hace que el script muestre el contenido del archivo después de moverlo a `/var/quarantined/`.
 - `/opt/ghost/clean_symlink.sh /home/bob/x3m1sec.png` → El script moverá el symlink y leerá su contenido.
@@ -251,7 +251,7 @@ bob@linkvortex:~$ cat /opt/ghost/clean_symlink.sh
 ```
 
 ```
-#!/bin/bash
+# !/bin/bash
 
 QUAR_DIR="/var/quarantined"
 

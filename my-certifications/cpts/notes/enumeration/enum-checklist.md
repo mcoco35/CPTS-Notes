@@ -1,8 +1,8 @@
 # Enum Cheklist
 
-##🧠 Initial Enumeration Checklist
+## 🧠 Initial Enumeration Checklist
 
-###🔍 Basic Discovery
+### 🔍 Basic Discovery
 - Target IP Address & Hostname
 - Host Discovery (Are They Alive?)
 - Ping Sweeps
@@ -10,7 +10,7 @@
 - Traceroute
 - Network Mapping
 
-###🔌 Port Scanning
+### 🔌 Port Scanning
 - TCP Connect Scans
 - SYN Scans
 - UDP Scans
@@ -18,7 +18,7 @@
 - Version Detection
 - Script Scanning
 
-###🌐 Service Enumeration
+### 🌐 Service Enumeration
 - Banner Grabbing
 - SNMP Enumeration
 - SMB Enumeration
@@ -35,24 +35,24 @@
 - SCADA Enumeration
 - Hardware Enumeration
 
-###🖥 Operating System Detection
+### 🖥 Operating System Detection
 - Nmap OS Detection
 - TTL Analysis
 - SMB OS Detection
 
-###🚨 Vulnerability Scanning
+### 🚨 Vulnerability Scanning
 - Nessus
 - OpenVAS
 - Nikto
 - Nmap NSE Scripts
 - Manual Vulnerability Checks
 
-###👤 User Enumeration
+### 👤 User Enumeration
 - Brute-force
 - Default Credentials Checks
 - Social Engineering
 
-###🕸 Web Enumeration
+### 🕸 Web Enumeration
 - Web Server Detection & Web Enumeration
 - CMS Enumeration (WordPress, Joomla, Drupal)
 - Version Control System Enumeration
@@ -64,57 +64,43 @@
 - Burp Suite Headers Analysis
 - HTML Tags Analysis
 
-###🌐 DNS Enumeration
+### 🌐 DNS Enumeration
 - DNS Lookups
 - Zone Transfers
 - Subdomain Enumeration
 - Reverse DNS Lookup
 - DNS Brute Forcing
 
-###🌍 WHOIS and Certificate Data
+### 🌍 WHOIS and Certificate Data
 - WHOIS Information
 - SSL/TLS Certificate Inspection
 - Certificate Enumeration
 
-###☁️ Cloud Enumeration
+### ☁️ Cloud Enumeration
 - AWS S3 Bucket Enumeration
 - Azure Blob Storage Enumeration
 - Google Cloud Storage Enumeration
 
-###📱 Mobile/IoT Enumeration
+### 📱 Mobile/IoT Enumeration
 - APK/IPA Analysis
 - Mobile API Enumeration
 - Bluetooth Enumeration
 - Firmware Analysis
 
-###🔎 External Intelligence
+### 🔎 External Intelligence
 - Shodan
 - Censys
 - Code Repository Enumeration
 
-###🧱 Infrastructure Components
+### 🧱 Infrastructure Components
 - Firewall Enumeration
 - VPN Enumeration
 - Load Balancer Enumeration
 - IDS/IPS Enumeration
 
-###📦 Container & Virtualization
+### 📦 Container & Virtualization
 - Container Enumeration (Docker, Kubernetes)
 
-###⚙️ Misc
+### ⚙️ Misc
 - Running Automated Recon Tools
 - Notes & Observations (Errors, Hidden Params, etc.)
-Last updated 10 months ago- [🧠 Initial Enumeration Checklist](#initial-enumeration-checklist)
-- [🔌 Port Scanning](#port-scanning)
-- [🌐 Service Enumeration](#service-enumeration)
-- [🖥 Operating System Detection](#operating-system-detection)
-- [🚨 Vulnerability Scanning](#vulnerability-scanning)
-- [👤 User Enumeration](#user-enumeration)
-- [🌐 DNS Enumeration](#dns-enumeration)
-- [🌍 WHOIS and Certificate Data](#whois-and-certificate-data)
-- [☁️ Cloud Enumeration](#cloud-enumeration)
-- [📱 Mobile/IoT Enumeration](#mobile-iot-enumeration)
-- [🔎 External Intelligence](#external-intelligence)
-- [🧱 Infrastructure Components](#infrastructure-components)
-- [📦 Container & Virtualization](#container-and-virtualization)
-- [⚙️ Misc](#misc)

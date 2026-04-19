@@ -1,6 +1,6 @@
 # Command-injections
 
-##🔧 Injection Operators
+## 🔧 Injection Operators
 🧪 Semicolon
 ```
 ;       %3b       # → Executes both commands (Linux & Windows)
@@ -31,9 +31,9 @@
 $()      %24%28%29     # → Sub-shell execution (Linux-only)
 ```
 
-####🐧 Linux - Filtered Character Bypass
+#### 🐧 Linux - Filtered Character Bypass
 🔍 View Environment Variables⛓️ Space Bypass🔀 Other Character Bypass⛔ Blacklisted Command Bypass✒️ Character Insertion🔠 Case Manipulation🔄 Reversed Commands📦 Encoded Commands
-###📦 Windows - Filtered Character Bypass
+### 📦 Windows - Filtered Character Bypass
 🔍 View Environment Variables (PowerShell)⛓️ Space Bypass🔁 Other Character Bypass⛔ Blacklisted Command Bypass✒️ Character Insertion🔠 Case Manipulation🔄 Reversed Commands📦 Encoded CommandsLast updated 10 months ago- [🔧 Injection Operators](#injection-operators)
 - [📦 Windows - Filtered Character Bypass](#windows-filtered-character-bypass)
 

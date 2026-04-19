@@ -4,9 +4,9 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Sauna es una máquina Windows de dificultad fácil que simula un entorno de Active Directory corporativo. La máquina presenta un sitio web de un banco ficticio que revela información sobre empleados, lo que permite la enumeración de usuarios válidos del dominio. La explotación inicial se logra mediante AS-REP Roasting contra un usuario sin pre-autenticación Kerberos habilitada. La escalada de privilegios se realiza a través del descubrimiento de credenciales hardcodeadas en el registro de Windows y culmina con un ataque DCSync para obtener acceso administrativo completo.
-###🎯 Puntos Clave
+### 🎯 Puntos Clave
 - Reconocimiento web: Extracción de nombres de empleados del sitio web corporativo
 - Generación de usernames: Uso de username-anarchy para crear listas de usuarios potenciales
 - Enumeración de usuarios: Kerbrute para validar usuarios en el dominio
@@ -15,15 +15,15 @@ Sauna es una máquina Windows de dificultad fácil que simula un entorno de Acti
 - Análisis con BloodHound: Identificación de privilegios DCSync
 - DCSync Attack: Volcado completo de hashes del dominio
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 - Puerto 53 (DNS): Servidor DNS del dominio
 - Puerto 80 (HTTP): Sitio web corporativo del banco
 - Puerto 88 (Kerberos): Servicio de autenticación del dominio
@@ -32,11 +32,11 @@ Sauna es una máquina Windows de dificultad fácil que simula un entorno de Acti
 - Puerto 5985 (WinRM): Administración remota de Windows
 - Puertos RPC varios: Servicios de llamadas remotas
 
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ Puerto 445 - SMB
+#### 🗂️ Puerto 445 - SMB
 Dado que no tenemos credenciales, intentamos enumeración con sesión nula pero no obtenemos información útil:
-####🌐 Puerto 80 - HTTP (Egotistical Bank)
+#### 🌐 Puerto 80 - HTTP (Egotistical Bank)
 Al acceder al sitio web encontramos una página corporativa del banco ficticio "Egotistical Bank":![](../../../../~gitbook/image.md)🔍 Fuzzing de directorios👥 Extracción de nombres de empleadosEn la página `/about.html` encontramos información valiosa sobre los empleados del banco:![](../../../../~gitbook/image.md)- Fergus Smith - Senior Manager
 - Shaun Coins - Marketing Manager
 - Sophie Driver - Account Manager
@@ -44,53 +44,53 @@ Al acceder al sitio web encontramos una página corporativa del banco ficticio "
 - Hugo Bear - CEO
 - Steven Kerb - Software Engineer
 Creamos una lista con estos nombres para generar posibles usernames:
-###🎯 Explotación Inicial
+### 🎯 Explotación Inicial
 
-####👤 Generación de Usernames
+#### 👤 Generación de Usernames
 Utilizamos `username-anarchy` para generar diferentes combinaciones de nombres de usuario:Esto genera combinaciones como:- fergus, fsmith, fergus.smith, ferguss
 - shaun, scoins, shaun.coins, shauns
 - sophie, sdriver, sophie.driver, sophied
 - etc.
 ![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🔐 Enumeración de usuarios con Kerbrute
+#### 🔐 Enumeración de usuarios con Kerbrute
 Usamos la herramienta `kerbrute` para tratar de enumerar usuarios válidos en el dominio¡Excelente! Encontramos un usuario válido: fsmith (Fergus Smith)
-####🎫 AS-REP Roasting
+#### 🎫 AS-REP Roasting
 Verificamos si el usuario `fsmith` tiene la pre-autenticación de Kerberos deshabilitada:¡Perfecto! El usuario tiene AS-REP Roasting habilitado. Guardamos el hash para crackearlo.![](../../../../~gitbook/image.md)
-####🔨 Cracking del hash
+#### 🔨 Cracking del hash
 ![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)¡Credenciales obtenidas!- Usuario: `fsmith`
 - Contraseña: `Thestrokes23`
 
-####✅ Verificación de acceso
+#### ✅ Verificación de acceso
 ![](../../../../~gitbook/image.md)
-###🚪 Acceso Inicial
+### 🚪 Acceso Inicial
 
-####💻 Conexión vía WinRM
+#### 💻 Conexión vía WinRM
 
-####🏃‍♂️ Captura de User Flag
+#### 🏃‍♂️ Captura de User Flag
 
-###🔝 Escalada de Privilegios
+### 🔝 Escalada de Privilegios
 
-####🔍 Enumeración del sistema
+#### 🔍 Enumeración del sistema
 🗝️ Descubrimiento de credenciales en el registroRealizamos enumeración básica del sistema en busca de vectores de escalada y encontramos credenciales almacenadas en el registro de Windows:¡Nueva credencial encontrada!- Usuario: `svc_loanmgr` (svc_loanmanager)
 - Contraseña: `Moneymakestheworldgoround!`
 ![](../../../../~gitbook/image.md)
-####🔄 Movimiento lateral
+#### 🔄 Movimiento lateral
 Verificamos si esta nueva cuenta tiene acceso WinRM:![](../../../../~gitbook/image.md)Nos conectamos con la nueva cuenta:
-####🩸 Análisis con BloodHound
+#### 🩸 Análisis con BloodHound
 Para analizar mejor los privilegios y relaciones en el dominio, utilizamos SharpHound:
-####📊 Análisis de privilegios
+#### 📊 Análisis de privilegios
 Una vez cargamos los datos en BloodHound y marcamos `svc_loanmgr` como "Owned", descubrimos que este usuario tiene privilegios especiales:![](../../../../~gitbook/image.md)- GetChanges: Permite leer cambios en el directorio
 - GetChangesAll: Permite leer todos los cambios, incluyendo secretos
 Estos privilegios nos permiten realizar un ataque DCSync para volcar todos los hashes del dominio.
-####💀 Ataque DCSync
+#### 💀 Ataque DCSync
 ¡Hash del Administrador obtenido!- Hash NTLM: `<REDACTED>`
 
-###👑 Acceso como Administrador
+### 👑 Acceso como Administrador
 
-####🔐 Pass The Hash
+#### 🔐 Pass The Hash
 Utilizamos el hash NTLM del administrador para obtener acceso completo:
-####🏁 Captura de Root Flag
-Last updated 9 months ago- [📝 Descripción](#descripcion)
+#### 🏁 Captura de Root Flag
+
 - [🎯 Puntos Clave](#puntos-clave)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración de Servicios](#enumeracion-de-servicios-1)

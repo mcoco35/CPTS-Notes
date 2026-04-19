@@ -3,45 +3,45 @@
 ![](../../../../~gitbook/image.md)Publicado: 10 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 ServMon es una máquina Windows de dificultad fácil que presenta múltiples vectores de ataque. La explotación inicial involucra el abuso de una vulnerabilidad de Directory Traversal en el servicio NVMS-1000 para obtener credenciales de usuario almacenadas en archivos de texto. Una vez obtenido acceso SSH, la escalada de privilegios se logra mediante la explotación de NSClient++, un agente de monitorización que permite la ejecución de scripts externos con privilegios de SYSTEM.
-###🎯 Resumen Ejecutivo
+### 🎯 Resumen Ejecutivo
 - IP de la máquina: 10.10.10.184
 - SO: Windows Server 2019
 - Servicios principales: FTP (21), SSH (22), HTTP (80), SMB (445), NSClient++ (8443)
 - Vulnerabilidades explotadas:Directory Traversal en NVMS-1000 (CVE-2019-20085)
 - Escalada de privilegios via NSClient++ (CVE-2019-20098)
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-####🔐 Enumeración de Servicios
+#### 🔐 Enumeración de Servicios
 📁 21 TCP - FTPTras confirmar mediante el escaneo que la sesión anónima en el servicio FTP está habilitada, utilizamos la herramienta `curlftpfs` para crear una montura de este recurso y enumerar mejor este servicio:
 Tras como hemos comprobado mediante el escaneo y la enumeración de servicios con nmap, la sessión anónima en el servicio FTP está habilitada.Usaremos la herramienta curlftpfs para crear una montura de este recurso y enumerar mejor este servicio:![](../../../../~gitbook/image.md)Encontramos un archivo de texto interesante llamado Confidential.txt en el directorio del usuario Nadine en el que le indica al usuario Nathan que ha dejado un documento con sus contraseñas en su Escritorio:![](../../../../~gitbook/image.md)Encontramos otro archivo de texto en el directorio del usuario Nathan pero no tenemos permisos para leerlo:![](../../../../~gitbook/image.md)De momento parece que aquí podemos hacer poco más.🗂️ 445 TCP - SMBVerificamos si podemos enumerar mediante una null session pero no parece estar habilitada, lo cual es una buena medida de seguridad:🌐 80 TCP - HTTPAl acceder al servicio de este puerto encontramos una aplicación llamada NVMS-1000. Buscando información pública encontramos que se trata de un Software para centralización de cámaras IP y grabadores MERIVA SO Windows (NVMS1000_) y MAC (NVMS1200).![](../../../../~gitbook/image.md)Las credenciales por defecto `admin:admin` `admin:123456` no funcionan🔎 Fuzzing de directoriosRealizamos fuzzing de directorios pero tampoco hallamos ningún recurso interesante que nos sirva como un posible vector de ataque.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
 ###### 💥 Explotación Inicial
 
-####🔓 Vulnerability Research - NVMS-1000
+#### 🔓 Vulnerability Research - NVMS-1000
 Buscamos exploits públicos para el servicio NVMS-1000 y encontramos que este servicio ha tenido vulnerabilidades de tipo Directory Traversal:![](../../../../~gitbook/image.md)CVE-2019-20085 - NVMS-1000 Directory Traversal
-####🎯 Explotación del Directory Traversal
+#### 🎯 Explotación del Directory Traversal
 Interceptamos la petición con Burp Suite y utilizamos el payload para confirmar la PoC:![](../../../../~gitbook/image.md)Usamos esta vulnerabilidad para leer el archivo `Passwords.txt` que estaba en el directorio del usuario Nathan, tal como descubrimos enumerando el servicio FTP:Payload utilizado:![](../../../../~gitbook/image.md)Veamos si podemos usar esta vulnerabilidad de Directory Path Traversal para leer el archivo Passwords.txt que estaba en el usuario de Nathan tal como descubrimos enumerando el servicio FTP. Para ello usamos el siguiente payload:![](../../../../~gitbook/image.md)🔑 Contraseñas obtenidas:🔐 Validación de CredencialesCreamos una lista con los usuarios que tenemos y las contraseñas para probarlas con los servicios ssh y smb:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)✅ Credenciales válidas encontradas: `nadine:L1k3B1gBut7s@W0rk`
-####SSH
+#### SSH
 Nos autenticamos como nadie en la máquina srvmon y obtenemos la primera flag en su directorio de usuario
-####🔍 Enumeración del Sistema
+#### 🔍 Enumeración del Sistema
 
-####📊 Análisis de Directorios Interesantes
+#### 📊 Análisis de Directorios Interesantes
 Verificamos que no tenemos permisos para leer el directorio del usuario NathanEnumerando la máquina encontramos un directorio que contiene un archivo .db3 que es una base de datos sqliteDescargamos este archivo a nuestro host de ataque usando scpNo encontramos nada de utilidad.🛠️ Aplicaciones InstaladasSeguimos enumerando la máquina y esta vez nos centramos en la carpeta de instalación de aplicaciones:NSClient es un agente diseñado originalmente para funcionar con Nagios, pero que desde entonces se ha convertido en un agente de monitorización completo compatible con diversas herramientas de monitorización.Hay varios archivos que merece la pena revisar del directorio de instalación de esta aplicación:changelog.txt
 nsclient.ini
 nsclient.logEncontramos una contraseña en el fichero nsclient.ini .![](../../../../~gitbook/image.md)Recordemos que con nmap enumerando un servicio en el puerto 8443 cuyo banner era NSClient++
 ###### 🚀 Escalada de Privilegios
 
-####🌐 8443 TCP - NSClient++ Web Interface
+#### 🌐 8443 TCP - NSClient++ Web Interface
 https://10.10.10.184:8443/index.html![](../../../../~gitbook/image.md)Probé a intentar autenticarme en el servicio con la contraseña encontrada el fichero nsclient.ini pero no logré ganar acceso. Sin embargo no fue un error de contraseña incorrecta sino un 403 o lo que es lo mismo un error por falta de permisos.Echando un ojo a esta línea del fichero nsclient.ini me hizo pensar que el acceso a este servicio está permitido única y exclusivamente de forma local, aunque el puerto esté expuesto:Usando SSH solicité un túnel local del puerto `8443` de mi máquina máquina hacia `127.0.0.1:8443` en la máquina remota.A continuación accedí al servicio en https://localhost:8443/index.html usando la contraseña `ew2x6SsGTxjRwXOT`y pude acceder al panel:![](../../../../~gitbook/image.md)A continuación, desde la sesión ssh en windows usé el siguiente comando para enumerar la versión de NSClient++
-####💣 Exploit - NSClient++ Privilege Escalation
+#### 💣 Exploit - NSClient++ Privilege Escalation
 CVE-2019-20098 - NSClient++ permite la escalada de privilegios local:
 Encontré algunos exploits públicos para esta versión y uno de ellos permitía la escalada de privilegios![](../../../../~gitbook/image.md)Al instalar NSClient++ con el servidor web habilitado, los usuarios locales con privilegios bajos pueden leer la contraseña del administrador web en texto plano desde el archivo de configuración. Desde aquí, el usuario puede iniciar sesión en el servidor web y realizar cambios en el archivo de configuración, que normalmente está restringido.El usuario puede habilitar los módulos para que revisen scripts externos y programen su ejecución. No parece haber restricciones sobre el origen de las llamadas, por lo que el usuario puede crear el script desde cualquier lugar. Dado que el servicio NSClient++ se ejecuta como sistema local, estos scripts programados se ejecutan como ese usuario y el usuario con privilegios bajos puede acceder a la escalada de privilegios. Según mi experiencia, se requiere reiniciar para recargar y leer los cambios en la configuración web.Requisitos previos:
 Para explotar esta vulnerabilidad con éxito, un atacante debe tener acceso local a un sistema que ejecute NSClient++ con el servidor web habilitado mediante una cuenta de usuario con privilegios bajos y la capacidad de reiniciar el sistema.Descargamos el exploit:Los pasos para llevar a acabo la explotación son los siguientes:El este caso el punto 1 ya lo tenemos, pues ya hemos obtenido la contraseña y tenemos acceso al servicio desde nuestro host de ataque. Así que accedemos al servicio y nos autenticamos con la contraseña ew2x6SsGTxjRwXOTEl siguiente punto es verificar que en la sección "Modules" tenemos habilitados los módulos CheckExternalScripts y Scheduler![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Ahora, en nuestro host de ataque debemo crearnos un archivo evil.bat con el siguiente contenido:El archivo .bat ejecutará la herramienta netcat para conectarse a la ip y el puerto del listener que abramos en nuestro host de ataque.Para esto debemos subir tanto el archivo .bat como la herramienta netcat al directorio c:\temp\Descargamos netcat en su versión de 64 bits para windows de https://eternallybored.org/misc/netcat/Esto podemos hacerlo de muchas formas, una de ellas es usando impacket y un servidor smb:Ahora en la máquina Windows, creamos el directorio Temp si no existe y montamos el recurso smb:![](../../../../~gitbook/image.md)El siguiente paso será definir un nuevo Script dentro de la aplicación NSClient++ de la siguiente forma:![](../../../../~gitbook/image.md)Le damos a "Añadir" y a continuacion guardamos la configuración![](../../../../~gitbook/image.md)Iniciamos el listenerReiniciamos desde la siguiente opción y esperamos recibir la reverse shell![](../../../../~gitbook/image.md)Una vez se reinicie navegamos a Queries y deberemos recibir la conexión reversa y ya podemos obtener la flag en el directorio Desktop del usuario Administrator:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)

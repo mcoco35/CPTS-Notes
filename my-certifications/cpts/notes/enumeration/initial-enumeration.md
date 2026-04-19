@@ -1,97 +1,97 @@
 # Initial Enumeration
 
-##Scanning
+## Scanning
 
-####NMAP TCP quick
+#### NMAP TCP quick
 
 ```
 sudo nmap -Pn -v -sS -sV -sC -oN tcp-quick.nmap IP
 ```
 
-####NMAP TCP Full
+#### NMAP TCP Full
 
 ```
 sudo nmap -Pn -sS --stats-every 3m --max-retries 1 --max-scan-delay 20 --defeat-rst-ratelimit -T4 -p1-65535 -oN tcp-full.nmap -sV IP
 ```
 
-####NMAP TCP - Repeat if extra ports found
+#### NMAP TCP - Repeat if extra ports found
 
 ```
 sudo nmap -Pn -v -sS -A -oN tcp-extra.nmap -p PORTS IP
 ```
 
-####NMAP UDP quick
+#### NMAP UDP quick
 
 ```
 sudo nmap -Pn -v -sU -sV --top-ports=30 -oN udp-quick.nmap IP
 ```
 
-####NMAP UDP 1000
+#### NMAP UDP 1000
 
 ```
 sudo nmap -Pn --top-ports 1000 -sU --stats-every 3m --max-retries 1 -T4 -oN udp-1000.nmap IP
 ```
 
-####NMAP UDP - Repeat if extra ports found
+#### NMAP UDP - Repeat if extra ports found
 
 ```
 sudo nmap -Pn -sU -A -oN udp-extra.nmap -p PORTS IP
 ```
 
-####ICMP Sweep
+#### ICMP Sweep
 
 ```
 fping -a -g 10.10.10.0/24 2>/dev/null
 ```
 
-####ARP Scan (Local Network)
+#### ARP Scan (Local Network)
 
-##Enumeration
+## Enumeration
 
-####FTP - Port 21
+#### FTP - Port 21
 
-####SSH - Port 22
+#### SSH - Port 22
 
-####Telnet - Port 23
+#### Telnet - Port 23
 
-####SMTP - Port 25
+#### SMTP - Port 25
 
-####POP - PORT 110
+#### POP - PORT 110
 
-####DNS - Port 53
+#### DNS - Port 53
 
-####Kerberos - Port 88
+#### Kerberos - Port 88
 
-##Indication that it's a DC
+## Indication that it's a DC
 
-####Netbios - Port 139
+#### Netbios - Port 139
 
-####RPC - PORT 135
+#### RPC - PORT 135
 
-####LDAP - Ports 389,636,3268,326
+#### LDAP - Ports 389,636,3268,326
 
-####SNMP - Port 161
+#### SNMP - Port 161
 
-####Oracle - Port 1521
+#### Oracle - Port 1521
 
-####MySQL - Port 3306
+#### MySQL - Port 3306
 
-####WEB - PORT 80 / 443
+#### WEB - PORT 80 / 443
 NMAP WebChecksDirbGobusterNiktowhatweb / wappalyzerwpscan (WordPress)
-####SMB - Ports
+#### SMB - Ports
 NMAP vuln scriptsCheck for Null loginsConnect to a share with Null sessionImpacket ToolsCheck permissions on a connect shareMount share on local machineList share with credentialsRecursively list all files in shareWith smbclient (recurse downloads all files)Upload / Download specific files
-####NFS - Port 2049
+#### NFS - Port 2049
 
-####TFTPD - UDP 69
+#### TFTPD - UDP 69
 
-##Automation Tools
+## Automation Tools
 
-####AutoRecon
+#### AutoRecon
 
-####NmapAutomator
+#### NmapAutomator
 
-##Finding exploits
-Last updated 10 months ago- [Scanning](#scanning)
+## Finding exploits
+
 - [Enumeration](#enumeration)
 - [Indication that it's a DC](#indication-that-its-a-dc)
 - [Automation Tools](#automation-tools)

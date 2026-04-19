@@ -3,56 +3,56 @@
 ![](../../../../~gitbook/image.md)Publicado: 18 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Access es una máquina Windows de dificultad fácil de HackTheBox que nos enseña la importancia de una enumeración exhaustiva y el manejo de credenciales. El vector de ataque inicial involucra el acceso a un servicio FTP anónimo que contiene archivos de backup sensibles. A través del análisis de una base de datos Microsoft Access y un archivo PST de Outlook, obtendremos credenciales válidas que nos permitirán conectarnos via Telnet. La escalada de privilegios se logra explotando credenciales guardadas en el sistema utilizando el comando `runas`.Técnicas utilizadas:- Enumeración de servicios FTP anónimos
 - Análisis de bases de datos Microsoft Access (.mdb)
 - Extracción y análisis de archivos PST de Outlook
 - Explotación de credenciales guardadas con runas
 - Reverse shells con PowerShell
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 🎯 Servicios identificados:- Puerto 21: FTP con acceso anónimo habilitado
 - Puerto 23: Servicio Telnet
 - Puerto 80: Servidor web IIS 7.5
 
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####📁 Puerto 21 - FTP Anónimo
+#### 📁 Puerto 21 - FTP Anónimo
 Durante la enumeración descubrimos que el servicio FTP permite autenticación anónima. Procedemos a enumerar el contenido:🗂️ Directorio Backups🔧 Directorio EngineerAlternativa para descarga recursiva:
-####🔐 Análisis de Archivos Descargados
+#### 🔐 Análisis de Archivos Descargados
 Archivos obtenidos:🗃️ Análisis del archivo backup.mdbUtilizamos la herramienta online https://www.mdbopener.com/es.html para analizar la base de datos:![](../../../../~gitbook/image.md)📊 Tabla auth_user encontrada:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)🔑 Credenciales obtenidas:- engineer: access4u@security
 - backup_admin: admin
 - admin: 55th
 🔓 Descompresión del archivo ZIPUsamos la contraseña `access4u@security` para descomprimir el archivo:📧 Análisis del archivo PSTUtilizamos https://goldfynch.com para analizar el archivo PST y encontramos:![](../../../../~gitbook/image.md)🔐 Nueva credencial encontrada:- Usuario: security
 - Contraseña: 4Cc3ssC0ntr0ller
 
-####🌍 Puerto 80 - HTTP (IIS 7.5)
+#### 🌍 Puerto 80 - HTTP (IIS 7.5)
 ![](../../../../~gitbook/image.md)El sitio web no presenta vectores de ataque evidentes y el fuzzing de directorios no revela rutas interesantes.
-###🚀 Explotación - Acceso Inicial
+### 🚀 Explotación - Acceso Inicial
 
-####📞 Conexión via Telnet
+#### 📞 Conexión via Telnet
 Utilizamos las credenciales encontradas para conectarnos al servicio Telnet:
-####🔄 Estableciendo Reverse Shell
+#### 🔄 Estableciendo Reverse Shell
 Preparación del payload PowerShell:Descargamos el script de Nishang:Añadimos al final del script:Ejecución desde Telnet:Reverse shell establecida:
-####🏁 Flag de Usuario
+#### 🏁 Flag de Usuario
 
-###📈 Escalada de Privilegios
+### 📈 Escalada de Privilegios
 
-####🔍 Enumeración del Sistema
+#### 🔍 Enumeración del Sistema
 Verificación de privilegios:
-####🛠️ Enumeración Automatizada con JAWS
+#### 🛠️ Enumeración Automatizada con JAWS
 
-####🔐 Credenciales Guardadas Encontradas
+#### 🔐 Credenciales Guardadas Encontradas
 ![](../../../../~gitbook/image.md)🎯 Vector de escalada identificado: Credenciales de Administrator guardadas en el sistema.
-####👑 Explotación con runas
+#### 👑 Explotación con runas
 Shell de Administrator obtenida:
-####🎖️ Flag de Root
+#### 🎖️ Flag de Root
 ![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración de Servicios](#enumeracion-de-servicios-1)

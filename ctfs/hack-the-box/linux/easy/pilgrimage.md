@@ -3,26 +3,26 @@
 ![](../../../../~gitbook/image.md)Publicado: 15 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Pilgrimage es una máquina Linux que aloja un servicio web para la subida y procesamiento de imágenes. La máquina explota dos vulnerabilidades principales: una en ImageMagick (CVE-2022-44268) que permite la exfiltración de archivos sensibles del sistema, y otra en Binwalk (CVE-2022-4510) que permite escalar privilegios a root. La ruta de ataque requiere conocimientos sobre explotación de aplicaciones de procesamiento de imágenes, análisis de código fuente y enumeración de sistemas Linux.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Debemos agregar este dominio a nuestro archivo hosts.
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 Enumerando el servicio web del puerto 80 descubrimos un servicio web que permite la subida de imágenes.![](../../../../~gitbook/image.md)Creamos una cuenta:![](../../../../~gitbook/image.md)Si intentamos subir un archivo con extensión php falla:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Tras interceptar la petición con burp, usar el Intruder para intentar bypassear los filtros de extensiones y el Content-Type no encontramos un posiblevector de entrada.🕷️Fuzzing de directoriosAl realizar fuzzing de directorios encontramos un recurso interesante llamdo /tmp:![](../../../../~gitbook/image.md)Aunque al intentar acceder nos devuelve un 403Probamos de nuevo pero esta vez usando la lista common.txt de seclists y encontramos que existe un repositorio git:![](../../../../~gitbook/image.md)Procedemos a descargarlo usando la herramienta git_dumper:Una vez descargado vemos los siguientes recursos:![](../../../../~gitbook/image.md)En el directorio .git encontramos un usuario llamado emily en el fichero `COMMIT_EDITMSG`![](../../../../~gitbook/image.md)Por otro lado, tabién vemos un binario llamado magick. Vale la pena enumera la versión ya que esta herramienta presentó vulnerabilidades en el pasado:
-###💻 Explotación
+### 💻 Explotación
 🔓 CVE-2022-44268Comprobamos que tal como suponíamos la versión de Magic es vulnerable a Arbitrary File Upload:
 https://www.exploit-db.com/exploits/51261![](../../../../~gitbook/image.md)Usaremos el siguiente exploit en python:https://github.com/kljunowsky/CVE-2022-44268Descargamos la herramienta y sus dependenciasUsamos la herramienta para crear la imagen "envenenada"A continuación la subimos al host.![](../../../../~gitbook/image.md)Ahora comprobamos si el exploit ha funcionado y al cargar la imagen podemos leer el contenido del fichero /etc/hosts que habíamos embebido:![](../../../../~gitbook/image.md)La prueba de concepto ha funcionado, por lo que podemos probar esto mismo con otros archivos que puedan resultar útiles.Anteriormente cuando descargamos el código fuente del sitio web vimos que había un archivo interesante en login.php:![](../../../../~gitbook/image.md)Podemos intentar leer el archivo /var/db/pilgrimagePero obtenemos el siguiente error:Eso puede tener sentido, ya que se trata de datos binarios y el script parece esperar solo texto ASCII.Descargamos el archivo de imagen manualmente de la web y a continuación mediante el uso de grep extraemos el contenido:Ahora que ya tenemos un archivo .sqlite descargado, usamos la herramienta para cargarlo y obtener la contraseña del usuario emily:
-####FootHold
+#### FootHold
 Iniciamos sesión vía ssh como emily y cpaturamos la primera flag.
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Enumeramos la máquina para encontrar un vector que nos permita escalar privilegios.Tras un buen rato enumerando (SUID, permisos, grupos, capabilities, directorios, etc) lo encontramos finalmente al enumerar los servicios:![](../../../../~gitbook/image.md)Verificamos que únicamente tenemos permisos de lectura sobre este script:![](../../../../~gitbook/image.md)Podemos enviarnos el contenido de este script a nuestro host de ataque para una mejor visualización con el siguiente comando:En el host de ataque nos podemos a la escucha:En el host remoto:![](../../../../~gitbook/image.md)El script usa inotifywait para monitorear el directorio /var/www/pilgrimage.htb/shrunk/ en busca de nuevos archivos.Cuando se crea un archivo nuevo, el script usa tail y sed para extraer el nombre del archivo de la salida de inotifywait.Luego, se usa binwalk para extraer cualquier dato binario y almacenarlo en la variable binout.
 Si se encuentra alguna de las cadenas en la lista negra, el archivo se elimina.
 Siempre que se usen herramientas no predeterminadas en scripts ejecutados por root como estos, conviene analizarlo con más detalle. Empezamos enumerando la versión de Binwalk:![](../../../../~gitbook/image.md)🔓 CVE-2022-4510Esta versión es vulnerable. Existe un exploit para esta versión que permite la ejecución remota de comandos. En este caso voy a usar uno que realiza directory path traversal que permite copiar una clave ssh generada en el directorio /root/.ssh de la máquina comprometida:https://github.com/adhikara13/CVE-2022-4510-WalkingPathGeneramos una clave pública y privada con SSH sin contraseña:![](../../../../~gitbook/image.md)Ahora usamos el exploit indicando una imagen fake y la clave id_rsa.pub que copiaremos en el directorio /root/.ssh de la máquina comprometida.![](../../../../~gitbook/image.md)Observamos que tras la ejecución del comando, nos genera la imagen envenenada que deberemos copiar en el directorio /shrunk donde la herramienta binwalk comprueba el tipo si es un ejecutable de windows o linux.Subimos la imagen a la máquina comprometida usando scp:Una vez hemos copiado el archivo, presuponemos que el proceso que identifica que cada vez que haya un cambio se ejecute binwalk, ya habrá copiado la clave pública fake de ssh al directorio /root/.ssh y podremos conectarnos con root sin contraseña, así que verificamos:Confirmamos la escalada de privilegios a root y ya podemos obtener la flag.Last updated 10 months ago- [📝 Descripción](#descripcion)

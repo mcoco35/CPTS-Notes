@@ -3,29 +3,29 @@
 ![](../../../../~gitbook/image.md)Publicado: 07 de Mayo de 2025
 Autor: José Miguel Romero aka x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 "Broker" es una máquina Linux de dificultad fácil en la plataforma HackTheBox que simula un entorno empresarial con un servidor de mensajería Apache ActiveMQ expuesto. La máquina destaca la importancia de mantener actualizado el software de infraestructura crítica, ya que el vector de ataque principal aprovecha una vulnerabilidad de deserialización (CVE-2023-46604) en ActiveMQ.Esta vulnerabilidad permite la ejecución remota de código sin necesidad de autenticación a través del protocolo OpenWire, lo que posibilita a un atacante obtener acceso inicial al sistema como usuario activemq. Posteriormente, la escalada de privilegios aprovecha una mala configuración en los permisos sudo, que permite al usuario ejecutar nginx como root, facilitando la lectura de archivos privilegiados en el sistema.La máquina es ideal para practicantes que quieran familiarizarse con la explotación de vulnerabilidades en middleware empresarial y técnicas de escalada de privilegios mediante configuraciones mal implementadas.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: El servicio HTTP redirige a `searcher.htb`. Debemos agregar este dominio a nuestro archivo hosts.
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 Al intentar acceder al servidor nginx que está ejecutándose en este puerto encontramos encontramos un panel de autenticación autenticación HTTP básica![](../../../../~gitbook/image.md)Al probar con las credenciales básicas `admin:admin`logramos acceder sin mayor problema y observar que se está ejecutado un servicio de colas MQ.![](../../../../~gitbook/image.md)Accedemos a las opciones de configuración:![](../../../../~gitbook/image.md)Encontramos la versión del servicio que es la 5.15.15, información que ya habíamos logrado enumerar también gracias a banner grabbing de nmap.Buscando información sobre posibles exploits para esta versión encontramos que hay un [CVE-2023-46604](https://github.com/advisories/GHSA-crg9-44h2-xw35)![](../../../../~gitbook/image.md)
-###💣 Explotación
+### 💣 Explotación
 CVE-2023-46604CVE-2023-46604 es una vulnerabilidad de deserialización que existe en el protocolo OpenWire de Apache ActiveMQ. Este defecto puede ser explotado por un atacante para ejecutar código arbitrario en el servidor donde se ejecuta ActiveMQ. El exploit script de este repositorio automatiza el proceso de enviar una petición crafteada al servidor para activar la vulnerabilidad.Descargamos el siguiente exploit:Editamos el archivo poc.xml para especificar en la reverse shell nuestro host y puerto de ataque:El exploit necesita ser ejecutado especificando los siguientes argumentos:Necesitamos previamente disponibilizar el payload poc.xml en un servidor web, para ello levantaremos un servidor web con python:Lanzamos el exploit y ganamos acceso remoto al servidor como usuario activemq:![](../../../../~gitbook/image.md)
-###🛠️ Mejora de la Shell
+### 🛠️ Mejora de la Shell
 Una vez ingresamos a la máquina, realizamos un spawn de la tty:A continuación Obtenemos la primera flag en el directorio /home/activemq:
-###🔑 Escalada de privilegios
+### 🔑 Escalada de privilegios
 Tras enumerar la máquina y no encontrar nada relevante, verificamos si el usuario activemq puede ejecutar algo como sudo:Si ejecutamos nginx vemos que falla porque el puerto 80 está ocupado:![](../../../../~gitbook/image.md)Si revisamos la ayuda de este programa vemos que una opción (-c) que permite especificar un archivo de configuración:![](../../../../~gitbook/image.md)
-####🎯 Explotación de nginx con sudo
+#### 🎯 Explotación de nginx con sudo
 Podemos abusar de esto creando una copia del archivo original de tal forma que podríamos iniciar nginx en otro puerto y con otras configuraciones que definamos:Establecemos la siguiente configuración en el fichero, de forma que lo que estamos haciendo es definir una nueva configuración para el usuario root que levante una nueva instancia de nginx en el puerto 1234 habilitando el directory listing:Lanzamos nginx especificando la configuración que hemos creado con el parámetro -cDe tal forma que si ahora accedemos desde nuestro host de ataque al puerto 1234 del host comprometido podremos realizar directory listing y acceder al directorio /root para capturar la flag:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)
 - [🔭 Reconocimiento](#reconocimiento)

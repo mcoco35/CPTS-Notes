@@ -3,50 +3,50 @@
 ![](../../../../~gitbook/image.md)Publicado: 14 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Giddy es una máquina Windows de dificultad media que presenta múltiples vectores de ataque interesantes. La explotación inicial se logra a través de una vulnerabilidad de inyección SQL en una aplicación ASP.NET, permitiendo la captura de hashes NTLMv2 mediante técnicas de forzado de autenticación SMB. Una vez obtenido el acceso inicial, la escalada de privilegios se aprovecha de una configuración insegura en Ubiquiti UniFi Video, donde permisos heredados permiten la ejecución de código arbitrario como NT AUTHORITY\SYSTEM.Esta máquina es ideal para practicar técnicas de explotación web, cracking de hashes, evasión de antivirus y escalada de privilegios en entornos Windows.
-###🎯 Objetivos
+### 🎯 Objetivos
 - User Flag: Obtener acceso inicial mediante SQL injection y hash cracking
 - Root Flag: Escalar privilegios explotando permisos inseguros en servicios
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🔍 Escaneo de puertos
+#### 🔍 Escaneo de puertos
 
-####🔧 Enumeración de servicios
+#### 🔧 Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🔗 80 HTTP
+#### 🔗 80 HTTP
 Enumeramos el servicio http en el puerto 80 y no es que haya gran cosa aparte de una divertida y peculiar imagen:![](../../../../~gitbook/image.md)📁 Fuzzing de directoriosRealizamos fuzzing de directorios para ver si encontramos algún recurso potencial que utilizar como vector de ataque. Para ello empleamos las herramientas dirsearch y feroxbuster:![](../../../../~gitbook/image.md)Encontramos únicamente dos recursos que analizar en profundidad "/remote" y "/mvc".🔐 /remote - Windows Powershell web accessEncontramos un panel de login de "Windows Powershell web access" aunque un mensaje nos indica que debemos autenticarnos desde la versión segura con https.http://10.10.10.104/Remote/en-US/logon.aspx?ReturnUrl=%2fremote%2flogin![](../../../../~gitbook/image.md)
-####🕸️ /mvc - Aplicación en ASP.net
+#### 🕸️ /mvc - Aplicación en ASP.net
 https://10.10.10.104/mvc/![](../../../../~gitbook/image.md)
-####💉 Explotación Inicial - SQL Injection
+#### 💉 Explotación Inicial - SQL Injection
 🔍 Identificación de la vulnerabilidadAl enumerar la aplicación, vemos que se trata de un sitio web en desarrollo y cuando seleccionamos sobre algunos de los productos vemos un parámetro GET en la llamada que podría ser vulnerable a SQLi![](../../../../~gitbook/image.md)Confirmamos la vulnerabilidad y enumeramos un usuario llamado jnogueira:![](../../../../~gitbook/image.md)🎣 Captura de Hash NTLMv2Al tratarse de una máquina windows, una de las cosas que merece la pena probar es intentar obtener un hash NTLMv2 forzando a la autenticación por parte del usuario de servicio de la base de datos contra un recureso de un servidor smb que levantemos en nuestro host de ataque usando imapacket de la siguiente forma:Usamos el siguiente payload. El carácter ";" lo inyectamos para cerrar la cosulta e iniciar otra en la que haremos una petición a nuestro recurso compartido:![](../../../../~gitbook/image.md)🔓 Cracking del HashE inmediatamente recibimos un hash NTLMv2 de un usuario llamado stacy:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Intentamos crackearlo usando hashcat y obtenemos la contraseña de stacy![](../../../../~gitbook/image.md)Credenciales obtenidas: `stacy:xNnWo6272k7x`
-####❌ Intento de conexión RDP
+#### ❌ Intento de conexión RDP
 Verificamos que las credenciales son válidas con el servicio RDP sin embargo no parece que podamos conectarnos![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####✅ Acceso vía WinRM
+#### ✅ Acceso vía WinRM
 Verificamos si stacy está dentro del grupo Remote Management System y podemos acceder a través del protocolo winrm:![](../../../../~gitbook/image.md)Todo hace indicar que sí, así que usamos evil-winrm para ganar acceso a la máquinacon las credenciales de stacy:![](../../../../~gitbook/image.md)
-####🌐 Autenticación alternativa con stacy a través de Windows Powershell Web Access
+#### 🌐 Autenticación alternativa con stacy a través de Windows Powershell Web Access
 Podemos usar también las credenciales de stacy para acceder a la máquina a través de la herramienta WIndows Powershell Web access.NOTA: Importante aquí especificar el carácter \ delante del usuario:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Accedemos al directorio Desktop del usuario stacy y obtenemos la primera flag:
 ###### 🔝 Escalada de Privilegios
 
-####🔍 Enumeración del sistema
+#### 🔍 Enumeración del sistema
 Al enumerar el directorio Documents de Stacy vemos que contiene un archivo poco común:
-####🎥 Investigación de Ubiquiti UniFi Video
+#### 🎥 Investigación de Ubiquiti UniFi Video
 Buscamos información pública sobre este archivo y parece pertenecer a
 Ubiquiti UniFi Video un software de videovigilancia de Ubiquiti usado para gestionar cámaras IP.Buscamos posibles exploits sobre este software encontramos que existe uno y además que permite la escalada de privilegios en WIndows para la versión 3.7.3![](../../../../~gitbook/image.md)Exploit Reference: [https://www.exploit-db.com/exploits/43390](https://www.exploit-db.com/exploits/43390)
-####🔧 Análisis del Exploit
+#### 🔧 Análisis del Exploit
 Si miramos el detalle de la explotación nos indica que debería existir en el sistema una ruta: de instalación de la herramienta en C:\ProgramData\unifi-video que comprobamos que existe:![](../../../../~gitbook/image.md)
-####📋 Resumen del Exploit
+#### 📋 Resumen del Exploit
 Ubiquiti UniFi Video para Windows se instala por defecto en `C:\ProgramData\unifi-video\` y también se entrega con un servicio llamado "Ubiquiti UniFi Video". Su ejecutable "avService.exe" se ubica en el mismo directorio y también se ejecuta bajo la cuenta NT AUTHORITY/SYSTEM.Los permisos predeterminados de la carpeta `C:\ProgramData\unifi-video` se heredan de `C:\ProgramData` y no se anulan explícitamente, lo que permite a todos los usuarios, incluso a los sin privilegios, añadir y escribir archivos en el directorio de la aplicación.Al iniciar y detener el servicio, se intenta cargar y ejecutar el archivo en `C:\ProgramData\unifi-video\taskkill.exe`. Sin embargo, este archivo no existe en el directorio de la aplicación por defecto.Al copiar un archivo `taskkill.exe` arbitrario en `C:\ProgramData\unifi-video\` como un usuario sin privilegios, es posible escalar privilegios y ejecutar código arbitrario como NT AUTHORITY/SYSTEM.
-####🛠️ Explotación para Escalada
+#### 🛠️ Explotación para Escalada
 🧪 Primer intento - Payload con msfvenomGeneramos un payload con msfvenom:Inicio un servidor web en python en mi host de ataque para disponibilizar el payload:Y ahora usando certutil lo descargo en el directorio C:\ProgramData\unifi-video![](../../../../~gitbook/image.md)Pero parece que el antivirus Defender nos borra el ejecutable en cuanto lo detecta o en cuanto lo ejecutamos.
-####🛡️ Evasión de Antivirus
+#### 🛡️ Evasión de Antivirus
 Usaremos [prometheus](https://github.com/paranoidninja/ScriptDotSh-MalwareDevelopment/blob/master/prometheus.cpp)una simple shell inversa TCP de C++, que se usará para crear el archivo malicioso taskkill.exe. Se han cambiado los nombres de las funciones y se han eliminado los comentarios para reducir la probabilidad de detección por antivirus basado en firmas📥 Descarga y configuración de PrometheusDescargamos prometheus y editamos la IP y el puerto con el de nuestro host de ataque:![](../../../../~gitbook/image.md)Para compilar esta herramienta necesitaremos tener instalada la herramienta Mingw-w64.Compilamos con el siguiente comando![](../../../../~gitbook/image.md)
-####🎯 Ejecución del Exploit
+#### 🎯 Ejecución del Exploit
 Ahora inicamos un listener con netcat en el host de ataque donde recibiré la conexión reversa:Transferimos nuevamente el binario taskkill.exe generado con prometheus al host Giddy usando certutil:Ahora nos queda únicamente detener e iniciar el servicio para que se realice la llamada a taskkill.exe como NT System. Pero antes debemos de saber cómo se llama el servicio y cómo detenerlo e iniciarlo.Buscamos el nombre del servicio en el registro de la siguiente forma:![](../../../../~gitbook/image.md)Reiniciamos el servicio (es posible que requiera parar e iniciar varias veces)Recibiremos la reverse shell como NT System:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🎯 Objetivos](#objetivos)
 - [🔭 Reconocimiento](#reconocimiento)

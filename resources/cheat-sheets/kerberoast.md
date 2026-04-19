@@ -1,10 +1,10 @@
 # Kerberoast
 
-##Tools
+## Tools
 Rubeus: [https://github.com/r3motecontrol/Ghostpack-CompiledBinaries/blob/master/Rubeus.exe](https://github.com/r3motecontrol/Ghostpack-CompiledBinaries/blob/master/Rubeus.exe)Kerbrute: [https://github.com/ropnop/kerbrute](https://github.com/ropnop/kerbrute)Impacket: [https://github.com/SecureAuthCorp/impacket](https://github.com/SecureAuthCorp/impacket)
-##ASREP-Roast
+## ASREP-Roast
 
-###Impacket
+### Impacket
 
 ```
 # ASREP check on all domain Users (Requires valid domain credentials)
@@ -14,7 +14,7 @@ python2 GetNPUsers.py /: -request -dc-ip  -format  | grep "$krb5asrep$"
 python2 GetNPUsers.py  -usersfile   -dc-ip  -format  | grep "$krb5asrep$"
 ```
 
-###Rubeus
+### Rubeus
 
 ```
 # Extract from all domain accounts
@@ -22,31 +22,31 @@ python2 GetNPUsers.py  -usersfile   -dc-ip  -format  | grep "$krb5asrep$"
 .\Rubeus.exe asreproast /format:hashcat /outfile:C:Hashes.txt
 ```
 
-###Cracking
+### Cracking
 
-##Brute Force
+## Brute Force
 
-###Kerbrute
+### Kerbrute
 Download: [https://github.com/ropnop/kerbrute](https://github.com/ropnop/kerbrute)
-###Rubeus
+### Rubeus
 
-##Kerberoasting
+## Kerberoasting
 
-###Impacket
+### Impacket
 
-###Rubeus
+### Rubeus
 
-##Pass-The-Ticket
+## Pass-The-Ticket
 
-###Mimikatz
+### Mimikatz
 
-###Rubeus
+### Rubeus
 
-###PsExec
+### PsExec
 
-##Silver Ticket
+## Silver Ticket
 [Silver Ticket | Pentest Everythingviperone.gitbook.io](https://viperone.gitbook.io/pentest-everything/everything/everything-active-directory/silver-ticket)
-##Golden Ticket
+## Golden Ticket
 [Golden Ticket | Pentest Everythingviperone.gitbook.io](https://viperone.gitbook.io/pentest-everything/everything/everything-active-directory/golden-ticket)Last updated 10 months ago- [Tools](#tools)
 - [ASREP-Roast](#asrep-roast)
 - [Impacket](#impacket)

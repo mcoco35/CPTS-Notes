@@ -1,6 +1,6 @@
 # Password-attacks
 
-####Password Mutations
+#### Password Mutations
 
 ```
 # Generate a wordlist from a website
@@ -15,7 +15,7 @@ hashcat --force password.list -r custom.rule --stdout > mut_password.list
 curl -s https://fileinfo.com/filetypes/compressed | html2text | awk '{print tolower($1)}' | grep "\." | tee -a compressed_ext.txt
 ```
 
-####Remote Password Attacks
+#### Remote Password Attacks
 
 ```
 # Brute-force WinRM service
@@ -39,12 +39,12 @@ crackmapexec smb  -u  -p  --ntds
 evil-winrm -i  -u Administrator -H ""
 ```
 
-####Windows Local Password Attacks
+#### Windows Local Password Attacks
 
-####Linux Local Password Attacks
+#### Linux Local Password Attacks
 
-####Cracking Passwords
-Last updated 10 months ago
+#### Cracking Passwords
+
 ```
 # List running processes
 tasklist /svc

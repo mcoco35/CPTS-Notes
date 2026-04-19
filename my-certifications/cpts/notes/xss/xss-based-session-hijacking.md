@@ -28,7 +28,7 @@ Example output:🛂 6. Replay Session Cookie In Firefox:- Visit target site
 - Click the site → Add cookie:Name: PHPSESSID
 - Value: abcdef123456
 - Refresh the page — you should be logged in as the victim.
-Last updated 10 months ago
+
 ```
 
 ```

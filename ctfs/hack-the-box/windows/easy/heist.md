@@ -3,79 +3,79 @@
 ![](../../../../~gitbook/image.md)Publicado: 19 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Heist es una máquina Windows de dificultad Easy que simula un escenario de soporte técnico donde un usuario comparte inadvertidamente un archivo de configuración de un router Cisco que contiene credenciales cifradas. La explotación implica:- Reconocimiento inicial: Identificación de servicios web y SMB
 - Obtención de credenciales: Descifrado de contraseñas Cisco tipo 7 y cracking de hashes MD5
 - Enumeración lateral: Reutilización de credenciales para acceso SMB y WinRM
 - Escalada de privilegios: Extracción de credenciales de memoria del proceso Firefox mediante volcado de memoria
 La máquina destaca la importancia de no compartir archivos de configuración y demuestra técnicas de análisis forense de memoria para la obtención de credenciales.
-###🎯 Resumen
+### 🎯 Resumen
 AspectoDetalleSOWindows ServerServicios principalesHTTP (80), SMB (445), WinRM (5985)Vector de entradaCredenciales expuestas en archivo de configuraciónEscaladaVolcado de memoria del proceso FirefoxFlags obtenidasuser.txt, root.txt
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Verificación de conectividad
+#### 🏓 Verificación de conectividad
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🔍 Escaneo de puertos
+#### 🔍 Escaneo de puertos
 
-####🔧 Enumeración de servicios
+#### 🔧 Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🔗 Puerto 80 - Support Login Page
+#### 🔗 Puerto 80 - Support Login Page
 Al acceder al servicio HTTP encontramos un panel de login de un servicio destinado a soporte técnico.![](../../../../~gitbook/image.md)
-####🎫 Acceso como invitado
+#### 🎫 Acceso como invitado
 La aplicación permite iniciar sesión como invitado, lo que nos da acceso a un chat de asistencia donde un usuario llamado Hazard comparte un archivo de configuración sensible:![](../../../../~gitbook/image.md)
-###🔓 Análisis de credenciales
+### 🔓 Análisis de credenciales
 
-####📄 Archivo de configuración Cisco IOS
+#### 📄 Archivo de configuración Cisco IOS
 El contenido del archivo adjunto revela ser una configuración de router Cisco IOS:
-####🔐 Descifrado de contraseñas Cisco Tipo 7
+#### 🔐 Descifrado de contraseñas Cisco Tipo 7
 Las contraseñas Cisco Tipo 7 utilizan un cifrado muy débil que puede ser fácilmente revertido:Método 1: Herramienta cisco-decryptMétodo 2: Herramienta online- URL: https://www.ifm.net.nz/cookbooks/passwordcracker.html
 ![](../../../../~gitbook/image.md)Credenciales obtenidas:- `admin:Q4)sJu\Y8qz*A3?d`
 - `rout3r:stealth1agent`
 
-####🥷 Cracking del hash MD5
+#### 🥷 Cracking del hash MD5
 Utilizamos hashcat para crackear el hash:![](../../../../~gitbook/image.md)Credencial obtenida: `rout3r:stealth1agent`
-###🔍 Enumeración de usuarios y servicios
+### 🔍 Enumeración de usuarios y servicios
 
-####🧪 Verificación de credenciales
+#### 🧪 Verificación de credenciales
 Probamos las credenciales obtenidas contra varios servicios, pero no funcionan directamente. Sin embargo, considerando el contexto del chat donde Hazard solicita una cuenta, probamos si reutilizó alguna contraseña:![](../../../../~gitbook/image.md)✅ ¡Éxito! Las credenciales `hazard:stealth1agent` son válidas para SMB.
-####👥 Enumeración de usuarios mediante RID Brute Force
+#### 👥 Enumeración de usuarios mediante RID Brute Force
 ![](../../../../~gitbook/image.md)
-####📋 Automatización de la extracción de usuarios
+#### 📋 Automatización de la extracción de usuarios
 Para automatizar el proceso, extraemos y limpiamos la lista de usuarios:![](../../../../~gitbook/image.md)
-####🎯 Password Spraying
+#### 🎯 Password Spraying
 Creamos lista de contraseñas:Verificación contra SMB:![](../../../../~gitbook/image.md)Verificación contra WinRM:![](../../../../~gitbook/image.md)Credenciales válidas encontradas:- SMB: `Chase:Q4)sJu\Y8qz*A3?d`
 - WinRM: `Chase:Q4)sJu\Y8qz*A3?d`
 
-###🚪 Acceso inicial
+### 🚪 Acceso inicial
 
-####🔑 Conexión WinRM
+#### 🔑 Conexión WinRM
 ![](../../../../~gitbook/image.md)Una vez dentro como Chase, obtenemos la primera flag en el directorio Desktop
-####🏁 Primera flag
+#### 🏁 Primera flag
 
-####📝 Análisis del archivo todo.txt
+#### 📝 Análisis del archivo todo.txt
 ![](../../../../~gitbook/image.md)El archivo `todo.txt` revela información importante:- Chase consulta regularmente el sitio web para ver la lista de problemas
 - Configuración de la copia de seguridad del router
 - El usuario invitado tiene acceso limitado comparado con `admin@support.htb`
 
-###🔬 Análisis de la memoria
+### 🔬 Análisis de la memoria
 El único proceso relacionado con un navegador que vemos en el sistema es firefox. SI queremos intentar capturar credenciales, podemos usar la herramienta `procdump64.exe`
 https://live.sysinternals.com/ y subirla con el comando upload de evil-winrm:
-####🛠️ Preparación de herramientas
+#### 🛠️ Preparación de herramientas
 Descarga de ProcDump:Subida a la máquina objetivo:
-####💾 Volcado de memoria
+#### 💾 Volcado de memoria
 Aceptación de licencia:Generación del dump:Descarga del archivo:
-###🕵️ Extracción de credenciales
+### 🕵️ Extracción de credenciales
 
-####🔍 Análisis del volcado de memoria
+#### 🔍 Análisis del volcado de memoria
 Ahora podemos usar el comando strings en combinación con grep para filtrar por posibles cadenas que contengan la palabra "password", "login" o "login_password":Resultado:Credenciales del administrador: `Administrator:4dD!5}x/re8]FBuZ`
-###👑 Escalada de privilegios
+### 👑 Escalada de privilegios
 Usamos las credenciales obtenidas y evil-winrm par autenticarnos como Administrador y obtenemos la flag:
-####🔐 Acceso como Administrator
+#### 🔐 Acceso como Administrator
 
-####🏆 Flag de root
-Last updated 10 months ago- [📝 Descripción](#descripcion)
+#### 🏆 Flag de root
+
 - [🎯 Resumen](#resumen)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)

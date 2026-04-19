@@ -3,32 +3,32 @@
 ![](../../../../~gitbook/image.md)Publicado: 12 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Nibbles es una máquina Linux de dificultad fácil en HackTheBox que involucra la explotación de una instalación vulnerable de Nibbleblog 4.0.3. La máquina requiere enumerar un CMS de blog, descubrir credenciales, explotar una vulnerabilidad de carga de archivos arbitrarios (CVE-2015-6967) para conseguir acceso inicial, y finalmente escalar privilegios aprovechando permisos sudo mal configurados en un script bash.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 Enumerando el servicio web del puerto 80 de forma manual, no vemos gran cosa aparte de un mensaje de bienvenida, aunque revisando el código fuente de la página encontramos un comentario en el que se menciona un directorio llamado /nibbleblog![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Al acceder a este recurso no vemos gran cosa, aunque buscando algo de información sobre Nibbleblog encontramos que es proyecto de código abierto basado en un CMS para crear blogs de forma sencilla.![](../../../../~gitbook/image.md)Revisando el código fuente en github hay varios ficheros que nos pueden aportar información sobre la versión:![](../../../../~gitbook/image.md)https://github.com/dignajar/nibbleblogGracias al fichero README enumeramos la versión(4.0.3)![](../../../../~gitbook/image.md)http://10.10.10.75/nibbleblog/README🕷️Fuzzing de directoriosAl realizar fuzzing de directorios usando la herramienta gobuster hallamos algunos ficheros interesantes además de algunos que ya habíamos logrado enumerar de forma manual:![](../../../../~gitbook/image.md)En el directorio content encontramos un xml con un nombre de usuario `admin`
 http://10.10.10.75/nibbleblog/content/private/users.xmlA continuación accedemos a otro de los recursos encontrado gracias al fuzzing de directorios, el panel de administración:http://10.10.10.75/nibbleblog/admin.php?controller=user&action=login![](../../../../~gitbook/image.md)Antes de iniciar un ataque de fuerza bruta, probamos el usuario `admin`obtenido en el paso anterior con contraseñas como nibblesblog, nibbleblog, nibbles y obtenemos éxito con esta última:![](../../../../~gitbook/image.md)
-###💻 Explotación
+### 💻 Explotación
 Anteriormente enumeramos la versión de este CMS. Una simple búsqueda nos permite saber que vulnerable a Arbitrary FIle Upload
-####🔓 CVE-2015-6967
+#### 🔓 CVE-2015-6967
 La vulnerabilidad de carga de archivos sin restricciones en el complemento My Image en Nibbleblog anterior a 4.0.5 permite a los administradores remotos ejecutar código arbitrario cargando un archivo con una extensión ejecutable y luego accediendo a él mediante una solicitud directa al archivo en content/private/plugins/my_image/image.php.Existen varios exploits públicos que permiten explotar esta vulnerabilidad:https://github.com/dix0nym/CVE-2015-6967En mi caso, solo voy a usar el exploit como referencia para entender lo que está haciendo. Hay una función para login y posteriormente hay otro par de funciones, una que se encarga de crear o subir un plugin llamado "my_image" adjuntando una shell "nibbles.php" como payload y posteriormente se realiza una llamada a `content/private/plugins/my_image/image.php` para desencadenar la reverse shell:En en este caso el plugin my_image ya existe, así que aprovechando que el módulo de carga de archivos es vulnerable a Arbitrary File Upload y no sanitiza ni valida el tipo de fichero que se carga, voy a subir una php reverse shell de pentestmonkey:Después de cambiar la IP y el puerto por el de mi host local, subo la shell![](../../../../~gitbook/image.md)A continuación inicio un listener en el puerto 1234:Por último realizo la petición a la shell y obtengo la conexión reversa:http://10.10.10.75/nibbleblog/content/private/plugins/my_image/image.php![](../../../../~gitbook/image.md)
-####Mejora de la shell
+#### Mejora de la shell
 En nuestro host de ataqueEn el host comprometido
-####Foothold
+#### Foothold
 Accedemos al directorio personal del usuario nibbler y capturamos la primera flag:
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Verificamos que el usuario nibbler puede ejecutar el siguiente script como root:En el directorio del usuario nibbler vemos que hay un archivo comprimido sobre el que el únicamente usuario nibbler tiene permisos de lectura:Tras descomprimirlo vemos que hay un script en bash llamado monitor.sh cuyo contenido es el siguiente:Dado que tenemos CONTROL TOTAL SOBRE el fichero:Podemos editar el contenido y dejar simplemente una llamada a la bash:De tal forma que cuando ejecutemos el script escalaremos privilegios a root y podremos capturar la flag:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)
 - [🔭 Reconocimiento](#reconocimiento)
@@ -180,7 +180,7 @@ nibbler@Nibbles:/home/nibbler$
 ```
 
 ```
-#! /bin/bash
+# ! /bin/bash
 # unset any variable which system may be using
 
 # clear the screen
@@ -300,7 +300,7 @@ nibbler@Nibbles:/home/nibbler/personal/stuff$
 ```
 
 ```
-#!/bin/bash
+# !/bin/bash
 /bin/bash
 ```
 

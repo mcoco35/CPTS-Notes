@@ -3,7 +3,7 @@
 ![](../../../../~gitbook/image.md)Publicado: 24 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Devvortex es una máquina Linux de dificultad Easy de HackTheBox que presenta un escenario realista de penetration testing enfocado en la explotación de un CMS Joomla vulnerable y técnicas de escalada de privilegios.La explotación comienza con el descubrimiento de virtual hosting mediante fuzzing de subdominios, revelando un subdominio de desarrollo (`dev.devvortex.htb`) que ejecuta una versión vulnerable de Joomla 4.2.6. Esta versión es susceptible a CVE-2023-23752, una vulnerabilidad de divulgación de información no autenticada que permite obtener credenciales de base de datos y usuarios del sistema.Una vez obtenidas las credenciales, se logra acceso al panel de administración de Joomla, desde donde se puede explotar un Remote Code Execution (RCE) mediante la modificación de plantillas PHP para ejecutar código malicioso y obtener una reverse shell.Para la escalada de privilegios horizontal, se utiliza el acceso a la base de datos MySQL para extraer hashes de contraseñas de usuarios, los cuales se crackan exitosamente para obtener acceso como el usuario `logan`.Finalmente, la escalada vertical a root se logra explotando CVE-2023-1326, una vulnerabilidad en `apport-cli` que permite escape de privilegios a través de la funcionalidad de visualización de reportes, ejecutando comandos como root desde el contexto del paginador.Esta máquina es ideal para practicar:- Enumeración de subdominios y virtual hosting
 - Explotación de CMS (Joomla)
 - Vulnerabilidades de divulgación de información
@@ -11,29 +11,29 @@ Devvortex es una máquina Linux de dificultad Easy de HackTheBox que presenta un
 - Cracking de hashes
 - Escalada de privilegios mediante herramientas del sistema
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 / TCP - devvortex.htb
+#### 80 / TCP - devvortex.htb
 ![](../../../../~gitbook/image.md)Tras enumerar el sitio web no encontramos gran cosa ni nada que aparentemente nos puede dar un vector de ataque.
-####🕷️Fuzzing de vhosts
+#### 🕷️Fuzzing de vhosts
 Relizando fuzzing de vhosts encontramos un subdominio llamado dev que inmediatamente añadimos a nuestro fichero /etc/hosts![](../../../../~gitbook/image.md)
-####80 / TCP - dev.devvortex.htb
+#### 80 / TCP - dev.devvortex.htb
 ![](../../../../~gitbook/image.md)
-####🕷️Fuzzing de directorios
+#### 🕷️Fuzzing de directorios
 ![](../../../../~gitbook/image.md)Enumeramos también el fichero robots.txt por si hubiese algún recurso adicional que no estuviese en el diccionario empleado durante el proceso de fuzzing:![](../../../../~gitbook/image.md)Hay un fichero README.txt mediante el cual podemos intuir que la versión de joomla empleada es la 4.2:http://dev.devvortex.htb/README.txt![](../../../../~gitbook/image.md)Encontramos algunos recursos interesantes, como por ejemplo un panel de administración que además nos permite enumerar que se está usando el CMS Joomla![](../../../../~gitbook/image.md)Dado que hemos confirmado de varias maneras que se está usando el CMS joomla, usamos la herramienta joomscan para ver si logramos enumerar algo más de información:![](../../../../~gitbook/image.md)
-###💻 Explotación
+### 💻 Explotación
 La herramienta nos confirma que la versión de joomla que se está usando es la 4.2.6. Una pequeña búsqueda nos permite saber que versiones anteriores a la 4.2.8 incluida, presentan una vulnerabilidad de tipo Unauthenticated information disclosurehttps://github.com/Acceis/exploit-CVE-2023-23752Revisamos el contenido de uno de los exploits para enteder lo que hace y vemos que hay una ruta en la que se publican los usuarios que no debería ser accesible:![](../../../../~gitbook/image.md)Verificamos esto en nuestro host objetivo y logramos enumerar dos usuarios:http://dev.devvortex.htb/api/index.php/v1/users?public=true![](../../../../~gitbook/image.md)Lanzamos el exploit para ver qué es capaz de recuperar, pero antes debemos instalar algunas dependencias:Ejecutamos el exploit![](../../../../~gitbook/image.md)Obtenemos dos usuarios, (levis y logan) y la contraseña del usuario lewis para una base de datos mysql.La credencial no funciona con el servicio ssh para ninguno de los dos usuarios pero sí podemos autenticarnos en el panel de administración de Joomla con el usuario lewis![](../../../../~gitbook/image.md)Podemos intentar explotar un RCE usando alguna de las plantillas instaladas y usando la página error.php de la plantilla para inyectar una php webshell:![](../../../../~gitbook/image.md)Verificamos que la webshell que hemos subido funciona correctamente:![](../../../../~gitbook/image.md)Iniciamos un listener:Reemplazamos ahora el código de error.php de la template por una php reverse shell de pentestmonkey![](../../../../~gitbook/image.md)Relizamos la petición a error.php y ganamos acceso a la máquina:![](../../../../~gitbook/image.md)Vamos al usuario de logan e intentamos capturar la flag pero no tenemos permisos:
-####Initial foothold
+#### Initial foothold
 Buscamos la forma de escalar a usuario logan. Comprobamos que hay una base de datos mysql ejecutándose de forma local y tenemos las credenciales de lewis![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Nos quedamos con el hash de logan:Verificamos qué tipo de hash es usando la herramienta Name that hash:![](../../../../~gitbook/image.md)Usamos hascat y rockyou para intentar crackearlo:![](../../../../~gitbook/image.md)Nos autenticamos como logan y obtenemos la primera flag:
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Ahora buscamos escalar privilegios a root:Tenemos permisos de ejecución y lectura sobre este archivo:![](../../../../~gitbook/image.md)Se trata de un script en python:Buscamos información de esta herramienta después de enumerar la versión y encontramos un exploit:![](../../../../~gitbook/image.md)https://github.com/diego-tella/CVE-2023-1326-PoCEl proceso es sencillo, ejecutamos la herramienta con la opción -c para indicar un archivo de bloqueo, después pulsamos V para visualizar el report y dentro de ese contexto ejecutamos una /bin/bash![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
@@ -221,7 +221,7 @@ logan@devvortex:~$
 ```
 
 ```
-#!/usr/bin/python3
+# !/usr/bin/python3
 
 '''Command line Apport user interface.'''
 

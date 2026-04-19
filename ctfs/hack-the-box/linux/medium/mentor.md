@@ -3,7 +3,7 @@
 ![](../../../../~gitbook/image.md)Publicado: 23 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Mentor es una máquina Linux de dificultad media que presenta múltiples vectores de ataque y técnicas de enumeración. La máquina aloja una aplicación web Flask que permite a los usuarios escribir citas motivadoras, complementada con una API REST documentada.La explotación inicial requiere una enumeración exhaustiva que incluye el descubrimiento de servicios SNMP en el puerto 161/UDP, donde mediante fuerza bruta se obtienen credenciales válidas almacenadas en strings de comunidad. Paralelamente, el fuzzing de virtual hosts revela un subdominio API (`api.mentorquotes.htb`) que expone endpoints administrativos protegidos por autenticación JWT.El vector de ataque principal involucra la autenticación en la API utilizando credenciales obtenidas via SNMP, seguido del abuso de una funcionalidad de backup vulnerable a inyección de comandos. Esta vulnerabilidad permite ejecutar código remoto y obtener acceso inicial al sistema, aunque se descubre que el acceso es a un contenedor Docker.La escalada de privilegios requiere técnicas de pivoting mediante port forwarding (utilizando ligolo-ng) para acceder a una base de datos PostgreSQL interna. Las credenciales extraídas de la base de datos permiten el acceso SSH al host real, y la escalada final se logra mediante el descubrimiento de credenciales adicionales en archivos de configuración SNMP y el abuso de permisos sudo mal configurados.Vectores de ataque principales:- Enumeración SNMP y fuerza bruta de community strings
 - Fuzzing de virtual hosts y descubrimiento de APIs
 - Inyección de comandos en endpoint de backup
@@ -11,33 +11,33 @@ Mentor es una máquina Linux de dificultad media que presenta múltiples vectore
 - Escalada mediante credenciales en archivos de configuración
 - Abuso de permisos sudo
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos TCP
+#### Escaneo de puertos TCP
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-####Escaneo de puertos UDP
+#### Escaneo de puertos UDP
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-####161 SNMP (UDP)
+#### 161 SNMP (UDP)
 En primer lugar podemos hacer fuerza bruta para descubrir distintos strings de comunidades![](../../../../~gitbook/image.md)Nos genera un fichero bastante extenso con todas las strings pero tras una enumeración profunda descubrimos algo que podría sernos útil y que podría ser una credencial porque se está usando con un script en python llamado login.py:![](../../../../~gitbook/image.md)
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 Enumerando el servicio web del puerto 80 de forma manual, no vemos gran cosa aparte de un portal donde los usuarios escriben citas motivadoras:![](../../../../~gitbook/image.md)Enumeramos las tecnologías usando wappalyzer y vemos que está construida con python 3 y Flask:![](../../../../~gitbook/image.md)Interceptamos la petición con Burpsuite y encontramos en la respuesta que el server es Werkzeug 2.0.3![](../../../../~gitbook/image.md)
-####Fuzzing de directorios (mentorquotes.htb)
+#### Fuzzing de directorios (mentorquotes.htb)
 No hallamos ningún recurso realizando fuzzing de directorios con gobuster y feroxbuster.
-####Fuzzing de vhosts (mentorquotes.htb)
+#### Fuzzing de vhosts (mentorquotes.htb)
 Durante la realización del fuzzing de vhost, es importante destacar que tuve que ajustar el comando usando varios diccionarios y añadiendo finalmente la opción -mc all, la cual fue clave para que obtenga cualquier tipo de código de respuesta:Halló un recureso api con un código de respuesta 404![](../../../../~gitbook/image.md)Añadimos este nuevo vhost `api.mentorquotes.htb` al fichero /etc/hostsVolvemos a realizar fuzzing de directorios sobre el nuevo vhost descubierto:
-####Fuzzing directorios (api.mentorquotes.htb)
+#### Fuzzing directorios (api.mentorquotes.htb)
 ![](../../../../~gitbook/image.md)Encontramos varios recursos:http://api.mentorquotes.htb/admin/![](../../../../~gitbook/image.md)http://api.mentorquotes.htb/users/![](../../../../~gitbook/image.md)http://api.mentorquotes.htb/docsUno de los recursos descubiertos contiene documentación sobre la API:http://api.mentorquotes.htb/docs![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Apuntamos este usuario por si pudiese sernos de utilidad.
-###💻 Explotación
+### 💻 Explotación
 Vamos a jugar con la API para ver si podemos encontrar un vector de ataque. Atacamos el endpoint de login usando el usuario que hemos obtenido "james" y usamos como contraseña el valor encontrado en la string de snmp:Vemos que el servicio nos responde con lo que podría ser un token:![](../../../../~gitbook/image.md)Existe otro endpoint /users que requiere de especificar una cadena de autorización para poder usarlo, probemos con el token que hemos obtenido:![](../../../../~gitbook/image.md)Construimos la petición GET con curl especificando el token en la cabecera de autorización y hacemos un pipe de jq para formatear la salida a formato JSON para una mejor visualización de la salida:![[Pasted image 20250523141535.png]]![](../../../../~gitbook/image.md)Por otro lado, si vamos al endpoint /admin e interceptamos la petición con burp y añadimos la cabecera de autorización con el token obtenido:![](../../../../~gitbook/image.md)Vemos en la respuesta que parece que hay un par de funciones de administración:Repetimos la misma operación con cada uno de ellos:/check![](../../../../~gitbook/image.md)Parece que esta función aún no ha sido implementada y nos sirve de utilidad./backup![](../../../../~gitbook/image.md)Esta nos indica que el tipo de petición no está permitida, cambiemos el GET por un POST:![](../../../../~gitbook/image.md)Ahora nos falla porque el servicio espera que le enviemos como parámetro un JSON que tenga esa estructura con un body.Añadimos primeo la cabecera content-type: application/json y metemos un json vacío![](../../../../~gitbook/image.md)Ahora que ya sabemos la estructura que espera el servicio, la pasamos en la llamada:![](../../../../~gitbook/image.md)Vemos que el servicio devuelve un DONE!, por lo que a priori parece haber ido bien.
-####Initial foothold
+#### Initial foothold
 Podemos abusar de esta petición para intentar ejecutar un RCE . Veamos primero si el parámetro path es vulnerable a inyección de comandosIniciamos la captura de tráfico de protocolo icmpUsamos el siguiente payload mediante el uso del carácter ; para ejecutar la inyección de comandos:Interceptamos la petición ping a nuestro host, luego la inyección funciona y validamos la prueba de concepto.![](../../../../~gitbook/image.md)Iniciamos un listenerVeamos ahora como podría llevar a cabo esto con una shell one liner para llevar a cabo un RCE:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Ganamos acceso a la máquina. Al principio parece que nuestro objetivo es doble, porque somo root, pero pronto nos damos cuenta de que estamos dentro de un contenedor de dockerObtenemos la primera flag en el directorio /home/svc![](../../../../~gitbook/image.md)
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Enumeramos la máquina y descubrimos un archivo db.py en el directorio /app/app:![](../../../../~gitbook/image.md)Para ganar acceso a la base de datos, necesitamos realizar port forwading, en este caso no podemos usar ssh porque no tenemos ninguna clave privada con la que podes conectarnos usando este protocolo, lo haremos usando ligolo-ngDescargamos ligolo tanto el proxy como el clienteDefinimos una interfaz para ligoloLevantamos la interfazIniciamos el proxy en el host de ataqueTransferimos el agente al host destino, le damos permisos de ejecución y lo ejecutamosAhora añadimos un listener para realizar el redireccionamientoA continuación usamos el siguiente comando para conectarnos a la base de datosEl hash está en md5, obtenemos la contraseña:![](../../../../~gitbook/image.md)Ahora nos conectamos a través del protocolo ssh usando el usuario svc y la contraseña obtenida:Escalada a usuario jamesBuscamos ahora la escalada de privilegiosTransferimos la herramienta linpeas.sh al directorio /tmp de la máquina objetivo, le damos permisos de ejecución y ejecutamos.![](../../../../~gitbook/image.md)Revisando el archivo /etc/snmp/snmpd.conf encontramos una credencial:![](../../../../~gitbook/image.md)Escalada a rootNos autenticamos como james usando la contraseña obtenida en el fichero snmpd.conf y logramos escalar a este usuario. A continuación, verificamos si puede ejecutar algún comando como root:En este caso, vemos que james puede ejecutar una shell como root, por lo que la escalada es muy sencilla y basta con hacer lo siguiente:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)

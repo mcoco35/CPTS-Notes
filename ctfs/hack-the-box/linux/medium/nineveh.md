@@ -3,7 +3,7 @@
 ![](../../../../~gitbook/image.md)Publicado: 03 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Nineveh es una máquina Linux de dificultad media que presenta múltiples vectores de ataque interconectados. El camino hacia la compromisión total incluye:- 🔍 Enumeración web exhaustiva en puertos 80 y 443 con virtual hosting
 - 🔐 Ataques de fuerza bruta contra paneles de autenticación
 - 📁 Explotación de Local File Inclusion (LFI) para lectura de archivos del sistema
@@ -12,47 +12,47 @@ Nineveh es una máquina Linux de dificultad media que presenta múltiples vector
 - 🗝️ Uso de claves SSH privadas extraídas mediante esteganografía
 - ⚡ Escalada de privilegios aprovechando vulnerabilidad en chkrootkit
 Esta máquina es excelente para practicar la cadena de exploits, donde cada vulnerabilidad individual no es suficiente por sí sola, pero su combinación permite la compromisión completa del sistema.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP (http://nineveh.htb/)
+#### 80 HTTP (http://nineveh.htb/)
 Al acceder al puerto 80 encontramos lo que parece ser un servidor apache en desarrollo, con un mensaje que indica que el contenido no ha sido añadido aún:![](../../../../~gitbook/image.md)🕷️Fuzzing de directoriosAl realizar fuzzing de directorios usando herramientas como feroxbuster, gobuster y dirsearch encontramos algunos recursos interesantes.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🔐 Panel de Login Departamental
+#### 🔐 Panel de Login Departamental
 Al acceder a http://nineveh.htb/department/files/ somos redirigidos a un panel de login.
 Rápidamente nos percatamos de que al probar algunas credenciales genéricas el panel nos indica que el usuario `admin` existe porque cuando introducimos otro distinto nos indica lo contrario:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)También encontramos un comentario del administrador en el código fuente de la página:![](../../../../~gitbook/image.md)
-####💥 Ataque de Fuerza Bruta
+#### 💥 Ataque de Fuerza Bruta
 Tras descartar que una posible vulnerabilidad de tipo SQLi en el panel de login, optamos por la vía de intentar un ataque de fuerza bruta usando el usuario admin y el diccionario rockyou mediante http-post-form y la herramienta hydra:Transcurridos unos minutos obtenemos la contraseña del usuario admin:![](../../../../~gitbook/image.md)Al acceder con las credenciales obtenidas encontramos el siguiente mensaje:![](../../../../~gitbook/image.md)Revisamos el otro servicio expuesto en el puerto 443 por si estas referencias se refiriesen a dicho servicio.
-####🗂️ Vulnerabilidad LFI (Local File Inclusion)
+#### 🗂️ Vulnerabilidad LFI (Local File Inclusion)
 Merece la pena analizar si el parámetro notes es vulnerable a LFI. Aquí está la lista de payloads que probé:parámetro de notasMensaje de error`ninevehNotes.txt`Sin error, muestra nota`/etc/passwd`No se ha seleccionado ninguna nota.`../../../../../../../../../../etc/passwd`No se ha seleccionado ninguna nota.`ninevehNotes`Advertencia: include(files/ninevehNotes): no se pudo abrir el flujo: No existe el archivo o directorio en /var/www/html/department/manage.php en la línea 31`ninevehNote`No se ha seleccionado ninguna nota.`files/ninevehNotes/../../../../../../../../../etc/passwd`El nombre del archivo es demasiado largo.`files/ninevehNotes/../../../../../../../etc/passwd`El contenido de`/etc/passwd``/ninevehNotes/../etc/passwd`El contenido de`/etc/passwd`Parece estar comprobando que la frase `ninevehNotes` esté en el parámetro, o de lo contrario simplemente muestra “No Note is selected.”. Pero hay formas de evitar eso, ya sea simplemente eliminando la extensión y subiendo directorios, o comenzando en `/` y luego entrar en una carpeta inexistente `ninevehNotes` e inmediatamente retrocede con `../`.Cofirmamos el LFI con el siguiente payload:![](../../../../~gitbook/image.md)
-####443 HTTP (https://nineveh.htb/)
+#### 443 HTTP (https://nineveh.htb/)
 ![](../../../../~gitbook/image.md)A primera vista no hay gran cosa salvo esta imagen, realizamos fuzzing para ver si encontramos algo de utilidad.🕷️Fuzzing de directoriosRealizamos fuzzing de directorios con gobuster especificando la flag -k para omitir la comprobación del certificado:Encontramos un directorio /db y otro /secure-notes que merece la pena analizar:https://10.10.10.43/secure_notes/![](../../../../~gitbook/image.md)
-####🖼️ Esteganografía en /secure-notes
+#### 🖼️ Esteganografía en /secure-notes
 Únicamente vemos una imagen, no hay tampoco nada en el código fuente, por lo que probablemente se esté usando esteganografía para ocultar algo en ella.Descargamos la imagen. En este caso no podemos usar steghide porque no es compatible con el formato .png. Pero podemos usar binwalk o incluso strings para ver si vemos algo:Aunque podemos usar `binwalk -e nineveh.png` en este caso con el comando strings ya conseguimos ver una clave privada RSA que pertenece al usuario amrois:El problema es que no tenemos ningún servicio SSH expuesto, por lo que esto ahora mismo todavía no nos sirve.
-####💉 Explotación de phpLiteAdmin v1.9
+#### 💉 Explotación de phpLiteAdmin v1.9
 Al acceder a https://nineveh.htb/db/ encontramos un panel de un servicio phpLiteAdmin del que además podemos enumerar la versión.![](../../../../~gitbook/image.md)
-####🔨 Ataque de Fuerza Bruta
+#### 🔨 Ataque de Fuerza Bruta
 Esta versión del servicio presenta varias vulnerabilidades, pero requieren de estar autenticado. La única vía que nos queda es usar nuevamente hydra con este panel para ver si logramos encontrar la contraseña:con -l fake simplemente indicamos un usuario aunque en este caso es irrelevante, ya que no hay campo en el formulario para el usuario, pero la herramienta lo exige.![](../../../../~gitbook/image.md)
-####🎯 Explotación de RCE
+#### 🎯 Explotación de RCE
 Buscamos exploits públicos para esta versión vulnerable de phplite. Uno de los más interesantes e el de Remote PHP Code Injection para obtener una RCE![](../../../../~gitbook/image.md)Ingresamos al panel de phpLiteAdmin y vemos que existe una única base de datos llamada test y no existen tablas:![](../../../../~gitbook/image.md)Los pasos que indica el exploit son los siguientes:1 Crear una nueva base de datos cuyo nombre termine en `.php`:![](../../../../~gitbook/image.md)2 A continuación, cambiamos a la nueva base de datos para crear una tabla con un campo de texto con un valor predeterminado de un webshell PHP básico:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
 NOTA: Importante a la hora de usar la php shell usar `"` en el PHP, ya que  `'` está siendo utilizado por la base de datos para definir toda la cadena:![](../../../../~gitbook/image.md)
-####🚀 Explotación Final - LFI + RCE
+#### 🚀 Explotación Final - LFI + RCE
 En este punto ya tenemos nueva web shell subida en la máquina, pero ahora no tenemos forma de desencadenar el ataque. ¿O sí? Recordemos el LFI descubierto en pasos anteriores:![](../../../../~gitbook/image.md)Ahora simplemente nos quedaría usar una bash shell one liner para ganar la RCE.Lo codificamos a URL:Iniciamos un listener con netcatLanzamos el payloadGanamos la RCE
-####👤 Movimiento Lateral - Usuario amrois
+#### 👤 Movimiento Lateral - Usuario amrois
 Existe un directorio para el usuario amrois donde se ubica la flag pero no tenemos permisos:
-####🗝️ Uso de la Clave SSH Privada
+#### 🗝️ Uso de la Clave SSH Privada
 Tras unos minutos enumerando la máquina, descubrimos que hay un servicio ssh corriendo localmente en la máquina:Esto es interesante como una vía potencial de escalada, ya que recordemos que tenemos una clave rsa privada del usuario amrois, por lo que nos valdría con guardar dicha clave en un archivo en el directorio /tmp de la máquina, darle permisos y autenticarnos vía ssh como amrois y ya podemos obtener la primera flag:
-####🚀 Escalada de Privilegios a Root
+#### 🚀 Escalada de Privilegios a Root
 Tras un buen rato enumerando la máquina, descubrimos algo interesante. Hay un directorio en la raíz que no es usual llamado report:
-####🕵️ Monitoreo de Procesos
+#### 🕵️ Monitoreo de Procesos
 En los archivos identificamos lo que podría ser un servicio para identificar rootkits porque hay referencias a /usr/bin/chkrootkit. Como sospecho que puede haber haber algún poceso en ejecución que lo esté lanzando cada periodo de tiempo, decido usar pspy o como alternativa usar el siguiente script para monitorizar procesos que se puedan estar ejecutando como root:![](../../../../~gitbook/image.md)Y efectivamente confirmamos que root está ejecutando periódicamente el comando
-####🎯 Exploit de chkrootkit
+#### 🎯 Exploit de chkrootkit
 Este servicio tiene una versión vulnerable para la cual existe un exploit para escalar privilegios![](../../../../~gitbook/image.md)El `txt`  indica que cualquier archivo en `$SLAPPER_FILES` se ejecutará debido a un error tipográfico debido a este bucle:Los pasos para llevar a cabo la explotación es crear un archivo llamado update en el directorio /tmp de la máquina introduciendo en él un comando malicioso, para que cuando sea ejecutando por la herramienta podamos escalar privilegiosIniciamos listenerCreamos el archivo malicioso en la ruta donde lo ejecutará chkrootkit y ganamos acceso como root.![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
@@ -289,7 +289,7 @@ report-25-06-03:12:21.txt  report-25-06-03:12:23.txt
 ```
 ## Script para detectar nuevos procesos (o procesos que han terminado) comparando periódicamente el listado de procesos.
 
-#!/bin/bash
+# !/bin/bash
 
 old_process="$(ps -eo user,command)"
 

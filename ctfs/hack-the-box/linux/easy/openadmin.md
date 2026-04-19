@@ -3,7 +3,7 @@
 ![](../../../../~gitbook/image.md)Publicado: 04 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 OpenAdmin es una máquina Linux de dificultad fácil de HackTheBox que presenta múltiples vectores de ataque web y escalada de privilegios. La explotación comienza con el descubrimiento de una instancia vulnerable de OpenNetAdmin (ONA) versión 18.1.1, que sufre de una vulnerabilidad de ejecución remota de código (RCE) a través de llamadas Ajax mal sanitizadas.La máquina requiere un enfoque metodológico que incluye:- Enumeración web exhaustiva para descubrir servicios ocultos
 - Explotación de CVE público en OpenNetAdmin
 - Movimiento lateral mediante reutilización de credenciales
@@ -12,42 +12,42 @@ OpenAdmin es una máquina Linux de dificultad fácil de HackTheBox que presenta 
 - Cracking de claves SSH protegidas con passphrase
 - Escalada de privilegios mediante abuso de permisos sudo en nano
 Esta máquina es excelente para practicar técnicas de enumeración web, explotación de CVEs conocidos, y escalada de privilegios mediante binarios con permisos especiales.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 Al acceder al puerto 80 lo único que encontramos es la pagina por defecto de un sitio web de apache en construcción:![](../../../../~gitbook/image.md)🔍Fuzzing de directoriosRelizamos fuzzing de directorios y obtenemos algunos algunos directorios importantes para analizar:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)En resumen, los recursos que merece analizar son:
-####🎵 http://10.10.10.171/music/
+#### 🎵 http://10.10.10.171/music/
 ![](../../../../~gitbook/image.md)
-####🎨 http://10.10.10.171/artwork/index.html
+#### 🎨 http://10.10.10.171/artwork/index.html
 ![](../../../../~gitbook/image.md)
-####📝 http://10.10.10.171/sierra/blog.html
+#### 📝 http://10.10.10.171/sierra/blog.html
 ![](../../../../~gitbook/image.md)Los tres recursos anteriores son servicios web muy similares en cuanto a construcción y tecnología, no encontramos a priori que nos conduzca a un posible vector de ataque.
-####🎯 http://10.10.10.171/ona/
+#### 🎯 http://10.10.10.171/ona/
 ![](../../../../~gitbook/image.md)
-####🎯 Explotación
+#### 🎯 Explotación
 Encontramos un servicio OpenNetAdmin. Buscando información pública encontramos que se trata de un proyecto de software libre https://github.com/opennetadmin/ona cuya función es proporcionar una herramienta IPAM (IP Address Management) para rastrear su atributos de red como nombres DNS, direcciones IP, subredes, direcciones MAC solo por nombrar algunos. A través del uso de plugins puede agregar extended it's funcionalidad.En este caso vemos que la versión es la V18.1.1.Una búsqueda rápida nos revela que existe una vulnerabilidad para dicha versión que permite explotar una RCE:![](../../../../~gitbook/image.md)La vulnerabilidad se encuentra en el uso inseguro de llamadas Ajax en el backend del sistema. En concreto, el endpoint `xajax=window_submit` acepta argumentos maliciosos que son ejecutados directamente por el sistema operativo sin una adecuada sanitización.Usaremos el siguiente exploit público:
 https://github.com/amriunix/ona-rce/blob/master/ona-rce.pyVerificamos que el sistema es vulnerable:![](../../../../~gitbook/image.md)Lanzamos el exploit y ganamos acceso al host mediante la RCE:![](../../../../~gitbook/image.md)
-####Acceso Inicial -💥 Explotación RCE en OpenNetAdmin
+#### Acceso Inicial -💥 Explotación RCE en OpenNetAdmin
 La shell con la que accedemos es un poco limitada, por lo que vamos a mejorarla de la siguiente forma.Iniciamos un listenerDesde la shell limitada
-####🔧 Mejora de la shell
+#### 🔧 Mejora de la shell
 Ahora ya podemos operar mejor. Enumeramos dos usuarios en el directorio /home a ninguno de los cuales tenemos permisos como usuario www-data:
-####🔄 Movimiento lateral de www-data a jimmy
+#### 🔄 Movimiento lateral de www-data a jimmy
 Comenzamos a enumerar la máquina. Encontramos credenciales de base de datos en el directorio `/opt/ona/www/local/config`Verificamos la conexión![](../../../../~gitbook/image.md)No parece gran cosa, así verificamos si alguno de los usuarios (jimmy, joanna) están reutilizando la contraseña: n1nj4W4rri0R! y confirmamos que funciona con el usuario jimmy.Sin embargo, vemos que shell actual no nos permite ejecutar determinadas operaciones, veamos si podemos usar la contraseña para conectarnos a través de SSH:Ahora ya parece funcionar el comando, aunque jimmy no pueda ejecutar nada como sudo:
-####🔄 Movimiento lateral de jimmy a joanna
+#### 🔄 Movimiento lateral de jimmy a joanna
 Continuamos enumerando la máquina y como sabemos que se está usando apache, revisamos en la ruta /etc/apache2/sites-enabled/ y vemos las siguientes configuraciones:Observamos que hay un servicio ejecutándose de manera local en el puerto 52846 cuyo servername es internal.openadmin.htb. Además está asignado al usuario joanna.Confirmamos con la utilidad ss que el servicio efectivamente se está ejecutando en el puerto 52846 de manera local:
-####🔗 Port Forwarding
+#### 🔗 Port Forwarding
 Vamos a realizar un redireccionamiento de este puerto a nuestro host de ataque para de esta forma acceder al servicio y ver si encontramos algo interesante.Necesitaremos también añadir la dns internal.openadmin.htb a nuestro fichero /etc/hostsAhora accedemos a http://localhost:52846/ y ya podemos enumerar el servicio
-####Tutorialspoint.com
+#### Tutorialspoint.com
 ![](../../../../~gitbook/image.md)Encontramos un panel de login y poco más. Recordemos que en la configuración de apache había un usuario asignado al servername, que es el usuario joanna. Podríamos primero probar con alguna de las contraseñas que ya tenemos o bien intentar un ataque de fuerza bruta con hydra y http-post-form aunque se me ocurre revisar otra cosa antes.Revisamos los permisos sobre el directorio /var/www/internal y vemos que jimmy tiene control absoluto sobre los ficheros de este directorio
-####🔧 Bypass de autenticación
+#### 🔧 Bypass de autenticación
 Si revisamos el contenido del fichero index.php vemos que hay valores harcoded para el usuario jimmy y un hash de contraseña en formato sha512 y cuando hay coincidencia, se redirecciona al fichero main.php![](../../../../~gitbook/image.md)Intentamos crackear este hash con hashcat y rockyou pero no tenemo éxito. Sin embargo, dado que tenemos control total sobre este fichero, podemos quitar esta validación o directamente hacer la comparación con la contraseña que queramos, por ejemplo:El contenido del fichero main.php verifica si se ha añadido el usuario de sesión y en caso afirmativo realiza una llamada usando la función de sistema shell_exec y un cat para imprimir el cotenido de la clave privada ssh del usuario joanna:![](../../../../~gitbook/image.md)Ahora que tenemos la clave privada de joanna, probamos a conectarnos vía ssh pero nos pide una contraseña:![](../../../../~gitbook/image.md)Podemos usar la herramienta ssh2john para generar un hash a partir de la clave privada e intentar crackear la contraseña usando john y el diccionario rockyou :![](../../../../~gitbook/image.md)Logramos autenticarnos como joanna y capturar la flag en su directorio de usuario.
-####🚀 Escalada de Privilegios a root
+#### 🚀 Escalada de Privilegios a root
 Verificamos en primer lugar si joanna como ejecutar algún comando o binario como sudoEn gtfobins encontramos informacion de como abusar de este binario para escalar privilegios mediante sudo.https://gtfobins.github.io/gtfobins/nano/#sudoBásicamente lanzamos el binario como sudoy una vez en nano usamos las opciones Ctrl +R y Ctrl + X y escribimos el siguiente comando:![](../../../../~gitbook/image.md)Ahora dentro ya estamos como sudo dentro del contexto de nano y podemos obtener la flag en el directorio /root:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
@@ -317,7 +317,7 @@ DocumentRoot /var/www/html
 # error, crit, alert, emerg.
 # It is also possible to configure the loglevel for particular
 # modules, e.g.
-#LogLevel info ssl:warn
+# LogLevel info ssl:warn
 
 ErrorLog ${APACHE_LOG_DIR}/error.log
 CustomLog ${APACHE_LOG_DIR}/access.log combined
@@ -327,7 +327,7 @@ CustomLog ${APACHE_LOG_DIR}/access.log combined
 # include a line for only one particular virtual host. For example the
 # following line enables the CGI configuration for this host only
 # after it has been globally disabled with "a2disconf".
-#Include conf-available/serve-cgi-bin.conf
+# Include conf-available/serve-cgi-bin.conf
 
 ```
 

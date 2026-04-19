@@ -4,109 +4,109 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Administrator es una máquina Windows de dificultad media que simula un entorno corporativo con Active Directory. La máquina presenta un escenario realista donde comenzamos con credenciales válidas de un usuario de dominio y debemos explotar relaciones de confianza, permisos especiales y configuraciones débiles para escalar privilegios hasta obtener acceso como Administrador del dominio.El escenario involucra técnicas comunes de post-explotación en entornos AD como enumeración de usuarios, análisis de ACLs (Access Control Lists), movimiento lateral a través de cambios de contraseña, cracking de bases de datos de contraseñas, ataques de Kerberoasting dirigidos y finalmente un ataque DCSync para obtener los hashes del dominio.
-###🎯 Puntos Clave
+### 🎯 Puntos Clave
 - Credenciales iniciales: `olivia:ichliebedich`
 - Vector de ataque: Explotación de permisos GenericAll/GenericWrite en Active Directory
 - Movimiento lateral: Cambios de contraseña mediante ACLs privilegiadas
 - Escalada de privilegios: DCSync attack para obtener hash del Administrator
 - Herramientas clave: BloodHound, netexec, bloodyAD, targetedKerberoast, impacket
 
-###🔍 Información de la Máquina
+### 🔍 Información de la Máquina
 AspectoDetalleIP10.10.11.42Dominioadministrator.htbControlador de DominioDCSistema OperativoWindows Server 2022 Build 20348Servicios PrincipalesFTP, DNS, Kerberos, LDAP, SMB, WinRM
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 PuertoServicioUso en el Ataque21FTPAcceso a archivos de backup con credenciales de Benjamin53DNSResolución de nombres del dominio88KerberosAutenticación y ataques de Kerberoasting389/3268LDAPEnumeración de usuarios y objetos del AD445SMBEnumeración de recursos compartidos y usuarios5985WinRMAcceso remoto con credenciales válidas
-####🔑 Credenciales Iniciales
+#### 🔑 Credenciales Iniciales
 Como es común en las pruebas de penetración de Windows de la vida real, iniciará el cuadro de Administrador con las credenciales de la siguiente cuenta:- Nombre de usuario: Olivia
 - Contraseña: ichliebedich
 
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ 445 SMB - Enumeración Inicial
+#### 🗂️ 445 SMB - Enumeración Inicial
 Ya que disponemos de credenciales, comenzamos tratando de enumerar recursos compartidos, usuarios etc:![](../../../../~gitbook/image.md)
-####👥 Enumeración de Usuarios del Dominio
+#### 👥 Enumeración de Usuarios del Dominio
 Creamos una lista con los usuarios obtenidos:![](../../../../~gitbook/image.md)
-####🎫 Verificación AS-Rep Roast
+#### 🎫 Verificación AS-Rep Roast
 Verificamos si de los usuarios obtenidos hay alguno que tenga la pre-autenticación de kerberos deshabilitada y podamos obtener un ticket:❌ Resultado: Ningún usuario vulnerable a AS-Rep Roast
-####🎯 Verificación Kerberoasting
+#### 🎯 Verificación Kerberoasting
 Con la credencial de la que disponemos verificamos si hay alguna cuenta sobre la que podamos realizar un ataque de kerberoasting:❌ Resultado: No se encontraron SPNs para Kerberoasting convencional
-####💧 Password Spraying
+#### 💧 Password Spraying
 Verificamos si la contraseña de Olivia está siendo reutilizada por algún otro usuario del dominio:✅ Resultado: Solo Olivia usa esta contraseña, pero pertenece al grupo Remote Management
-###🔓 Acceso Inicial
+### 🔓 Acceso Inicial
 
-####💻 Conexión WinRM como Olivia
+#### 💻 Conexión WinRM como Olivia
 ![](../../../../~gitbook/image.md)
-####🏠 Enumeración de Usuarios Locales
+#### 🏠 Enumeración de Usuarios Locales
 
-###🩸 Análisis con BloodHound
+### 🩸 Análisis con BloodHound
 
-####📊 Recolección de Datos del Dominio
+#### 📊 Recolección de Datos del Dominio
 
-####🎯 Identificación de Permisos Especiales
+#### 🎯 Identificación de Permisos Especiales
 Tras cargar los resultados, observo que Olivia tiene control total (GenericAll) sobre el usuario Michael:![](../../../../~gitbook/image.md)
-###🔄 Movimiento Lateral - Fase 1
+### 🔄 Movimiento Lateral - Fase 1
 
-####👤 Olivia → Michael (GenericAll)
+#### 👤 Olivia → Michael (GenericAll)
 Usamos bloodyAD para cambiar la contraseña de Michael usando las credenciales de Olivia:![](../../../../~gitbook/image.md)
-####✅ Verificación de Acceso como Michael
+#### ✅ Verificación de Acceso como Michael
 
-###🔄 Movimiento Lateral - Fase 2
+### 🔄 Movimiento Lateral - Fase 2
 
-####👤 Michael → Benjamin (ForceChangePassword)
+#### 👤 Michael → Benjamin (ForceChangePassword)
 Volvemos a BloodHound para marcar Michael como Owned y descubrimos que Michael puede cambiar la contraseña del usuario Benjamin:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🚫 Limitaciones de Acceso de Benjamin
+#### 🚫 Limitaciones de Acceso de Benjamin
 Benjamin no puede acceder vía WinRM ni tiene recursos interesantes en SMB:![](../../../../~gitbook/image.md)
-###📁 Descubrimiento de Archivos Críticos
+### 📁 Descubrimiento de Archivos Críticos
 
-####📂 Acceso FTP como Benjamin
+#### 📂 Acceso FTP como Benjamin
 Sin embargo, Benjamin puede acceder al servicio FTP y encontramos un archivo crucial:![](../../../../~gitbook/image.md)
-####🔐 Análisis del Archivo Password Safe
+#### 🔐 Análisis del Archivo Password Safe
 
-###🔨 Cracking de Password Safe
+### 🔨 Cracking de Password Safe
 
-####⚡ Ataque de Fuerza Bruta con Hashcat
+#### ⚡ Ataque de Fuerza Bruta con Hashcat
 ![](../../../../~gitbook/image.md)
-####🗝️ Extracción de Credenciales
+#### 🗝️ Extracción de Credenciales
 Usamos pwsafe para Linux para abrir el vault con la contraseña obtenida:![](../../../../~gitbook/image.md)
-####📋 Credencial Descubierta
+#### 📋 Credencial Descubierta
 De los usuarios encontrados en el vault, identificamos que Emily era uno de los usuarios enumerados previamente:![](../../../../~gitbook/image.md)Credencial obtenida: `emily:UXLCI5iETUsIBoFVTj8yQFKoHjXmb`
-###🔄 Movimiento Lateral - Fase 3
+### 🔄 Movimiento Lateral - Fase 3
 
-####👤 Acceso como Emily
+#### 👤 Acceso como Emily
 
-####🚩 Primera Flag Obtenida
+#### 🚩 Primera Flag Obtenida
 
-###🚀 Escalada de Privilegios
+### 🚀 Escalada de Privilegios
 
-####🔍 Análisis de Permisos de Emily en BloodHound
+#### 🔍 Análisis de Permisos de Emily en BloodHound
 Después de enumerar sin encontrar vías tradicionales de escalada, revisamos los ACLs de Emily en BloodHound:![](../../../../~gitbook/image.md)
-####✍️ Explotación de GenericWrite
+#### ✍️ Explotación de GenericWrite
 Emily tiene permisos GenericWrite sobre Ethan, lo que nos permite realizar un Targeted Kerberoasting Attack.
-####🎯 Targeted Kerberoasting Attack
+#### 🎯 Targeted Kerberoasting Attack
 Usamos [targetedKerberoast](https://github.com/ShutdownRepo/targetedKerberoast) para crear un SPN falso y obtener un TGS de Ethan:⚠️ Importante: Sincronizar relojes con ntpdate para evitar errores de Kerberos KRB_AP_ERR_SKEW
-####🔓 Cracking del Ticket TGS
+#### 🔓 Cracking del Ticket TGS
 ![](../../../../~gitbook/image.md)Credencial obtenida: `ethan:limpbizkit`
-###👑 Compromiso Total del Dominio
+### 👑 Compromiso Total del Dominio
 
-####🔍 Análisis de Permisos de Ethan
+#### 🔍 Análisis de Permisos de Ethan
 Con Ethan comprometido, analizamos sus permisos en BloodHound:![](../../../../~gitbook/image.md)
-####🎯 Permisos DCSync Identificados
+#### 🎯 Permisos DCSync Identificados
 Ethan posee los siguientes permisos críticos:- GetChangesInFilteredSet
 - GetChangesAll
 - GetChangesAll
 Estos permisos permiten realizar un DCSync Attack para obtener todos los hashes del dominio.
-####💎 Ejecución del DCSync Attack
+#### 💎 Ejecución del DCSync Attack
 
-####🏆 Acceso como Administrator
+#### 🏆 Acceso como Administrator
 Finalmente usamos evil-winrm para realizar pass-the-hash y obtener acceso como Administrator:Last updated 9 months ago- [📝 Descripción](#descripcion)
 - [🎯 Puntos Clave](#puntos-clave)
 - [🔭 Reconocimiento](#reconocimiento)

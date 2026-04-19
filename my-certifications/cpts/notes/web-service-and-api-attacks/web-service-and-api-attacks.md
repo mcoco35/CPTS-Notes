@@ -1,81 +1,81 @@
 # web-service-and-api-attacks
 
-###XML-RPC Attacks
+### XML-RPC Attacks
 
-####Manual Request Crafting (curl)
+#### Manual Request Crafting (curl)
 
 ```
 curl -X POST -H "Content-Type: text/xml" -d 'examples.getStateName41' http://target.com/RPC2
 ```
 
-####Fuzzing with wfuzz
+#### Fuzzing with wfuzz
 
 ```
 wfuzz -z file,xmlrpc_methods.txt -d 'FUZZ1' http://target.com/RPC2
 ```
 
-###JSON-RPC Attacks
+### JSON-RPC Attacks
 
-####Manual Request Crafting (curl)
+#### Manual Request Crafting (curl)
 
 ```
 curl -X POST -H "Content-Type: application/json-rpc" -d '{"method": "sum", "params": {"a": 3, "b": 4}, "id": 0}' http://target.com/ENDPOINT
 ```
 
-####Fuzzing with wfuzz
+#### Fuzzing with wfuzz
 
 ```
 wfuzz -z file,jsonrpc_methods.txt -d '{"method": "FUZZ", "params": {}, "id": 0}' http://target.com/ENDPOINT
 ```
 
-###SOAP Attacks
+### SOAP Attacks
 
-####Manual Request Crafting (curl)
+#### Manual Request Crafting (curl)
 
 ```
 curl -X POST -H "Content-Type: text/xml;charset=UTF-8" -d 'Microsoft' http://target.com/Quotation
 ```
 
-###RESTful API Attacks
+### RESTful API Attacks
 
-####Basic HTTP Requests (curl)
+#### Basic HTTP Requests (curl)
 
-####Fuzzing with wfuzz
+#### Fuzzing with wfuzz
 
-####SSRF Tests (curl)
+#### SSRF Tests (curl)
 
-####XXE Tests (curl)
+#### XXE Tests (curl)
 
-####JWT Attacks (using jwt_tool)
+#### JWT Attacks (using jwt_tool)
 
-####API Rate Limiting Bypass (using ffuf)
+#### API Rate Limiting Bypass (using ffuf)
 
-###General Web Service/API Tools
+### General Web Service/API Tools
 
-####Nmap (Network Scanning)
+#### Nmap (Network Scanning)
 
-####Nikto (Web Server Scanning)
+#### Nikto (Web Server Scanning)
 
-####Gobuster (Directory Brute-forcing)
+#### Gobuster (Directory Brute-forcing)
 
-####SQLmap (SQL Injection)
+#### SQLmap (SQL Injection)
 
-####Burp Suite (GUI & Automation via Burp APIs)
+#### Burp Suite (GUI & Automation via Burp APIs)
 
-####Postman (API Testing & Automation via Newman)
+#### Postman (API Testing & Automation via Newman)
 
-####OWASP ZAP (Automated Security Testing)
+#### OWASP ZAP (Automated Security Testing)
 
-####Wsdump.pl (WSDL analysis, part of OWASP WSFuzzer)
+#### Wsdump.pl (WSDL analysis, part of OWASP WSFuzzer)
 
-###Key Things to Remember
+### Key Things to Remember
 - Placeholders: Replace `target.com`, `http://target.com/api/endpoint`, etc., with actual targets.
 - Wordlists: Ensure `xmlrpc_methods.txt`, `jsonrpc_methods.txt`, `api_endpoints.txt` exist.
 - Dependencies: Install tools (`curl`, `wfuzz`, `nmap`, etc.) before testing.
 - Ethical Use: Only test on systems you have explicit permission for.
 - Burp Suite/Postman: Primarily GUI tools but support CLI automation.
 - OWASP ZAP: Requires CLI tools installed for automation.
-Last updated 10 months ago- [XML-RPC Attacks](#xml-rpc-attacks)
+
 - [JSON-RPC Attacks](#json-rpc-attacks)
 - [SOAP Attacks](#soap-attacks)
 - [RESTful API Attacks](#restful-api-attacks)

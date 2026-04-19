@@ -3,25 +3,25 @@
 ![](../../../../~gitbook/image.md)Publicado: 13 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Poison es una máquina FreeBSD de dificultad media que alberga un sitio web vulnerable a Local File Inclusion (LFI). El camino para comprometer la máquina incluye la explotación de esta vulnerabilidad para obtener credenciales cifradas, seguido del descubrimiento de un servicio VNC ejecutándose localmente. La escalada de privilegios implica el aprovechamiento de un archivo secreto ZIP y la creación de un túnel SSH para acceder al servicio VNC ejecutándose como root, permitiendo así la obtención de la flag del sistema.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 ![](../../../../~gitbook/image.md)Encontramos un sitio web que nos permite introducir el nombre de un script para leer su contenido:![](../../../../~gitbook/image.md)Vale la pena analizar si el parámetro "file" está debidamente sanitizado y no es vulnerable a LFI o Path Traversal.Al introducir un valor de script que no existe, obtenemos un error, lo cual ya nos hace indicar que puede no estar bien sanitizado, ya que nos perite además ver la ruta del archivo completa:![](../../../../~gitbook/image.md)Probando el siguiente payload para leer el archivo /etc/passwd confirmamos la vulnerabilidad![](../../../../~gitbook/image.md)Otro de los archivos que tenemos es :
 http://10.10.10.84/browse.php?file=listfiles.php el cual nos permite ver un archivo interesante llamado pwdbackup.txt![](../../../../~gitbook/image.md)Usando el siguiente payload leemos su contenido:
 http://10.10.10.84/browse.php?file=pwdbackup.txtHay una nota junto a esta contraseña que nos indica que la contraseña se ha codificado 13 veces. A simple vista parece que está codificada en base 64, para hacer este proceso iterativo más rápido usamos la herramienta https://cyberchef.io/ y repetimos el proceso de decodificacion de base64 13 veces hasta obtener la contraseña:![](../../../../~gitbook/image.md)Tenemos una contraseña pero no tenemos usuarios, pero si nos fijamos en un pequeño detalle de cuando enumeramos el fichero /etc/passwd vemos que había un usuario llamado charix![](../../../../~gitbook/image.md)Probamos a intentar conectarnos vía ssh:Ganamos conexión al host remoto vía ssh:![](../../../../~gitbook/image.md)Obtenemos la flag del directorio /home/charix;
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Al enumerar la máquina descubrimos un archivo .zip en el directorio /home/charix:Nos pide una contraseña, como no la tenemos, vamos a descargar el archivo a nuestro host de ataque para ver si podemos usar fuerza bruta:Usamos la contraseña que obtuvimos anteriormente y se extrae un archivo llamado secret cuyo contenido no es legible:![](../../../../~gitbook/image.md)Seguimos enumerando la máquina y listamos los servicios con![](../../../../~gitbook/image.md)Vemos que hay dos servicios que no están espuestos (5801,5901) que corresponden a servicios vncHacemos port forwading de ellos para enumerarlos y ver si hay algún posible vector de ataque:Ahora intentamos conectarnos a alguno de los puertos usando vncviewer y el fichero secret que habíamos encontrado anteriormente:![](../../../../~gitbook/image.md)Tras enumerar la máquina, comprobamos que sudo no está instalado en la máquina, tampoco hay grupos interesante ni capabilities. Tampoco detectamos una versión vulnerable del kernel, pero al listar procesos vemos algo intesante:![[Pasted image 20250513131131.png]]![](../../../../~gitbook/image.md)Se está ejecutando un script en python llamado tmp.py como root.Revisamos los permisos del archivo y vemos que tenemos control total sobre el mismo:Así que reemplazamos su contenido por el de una simple python reverse shell:Simple python reverse shell
 https://github.com/orestisfoufris/Reverse-Shell---Python/blob/master/reverseshell.pyA continuación, esperamos unos segundos y recibimos la reverse shell como root para finalmente obtener la flag:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)

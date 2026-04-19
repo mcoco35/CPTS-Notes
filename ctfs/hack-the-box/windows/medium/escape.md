@@ -4,13 +4,13 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Sequel es una máquina Windows de dificultad media que simula un entorno empresarial con Active Directory Certificate Services (ADCS). La explotación comienza con el acceso a recursos SMB públicos que contienen documentación sobre procedimientos de acceso a SQL Server. A través de estas credenciales iniciales, se realiza un ataque de captura de hash NTLMv2 mediante el abuso de la función `xp_dirtree` en MSSQL. Una vez obtenidas las credenciales del usuario `sql_svc`, se accede al sistema via WinRM y se descubren credenciales adicionales en logs del servidor SQL. Finalmente, se explota una vulnerabilidad ESC1 en ADCS para obtener un certificado digital que permite suplantar al administrador del dominio y comprometer completamente el sistema.
-###📊 Resumen de la Explotación
+### 📊 Resumen de la Explotación
 
-####🔗 Cadena de Ataque
+#### 🔗 Cadena de Ataque
 
-###🎯 Puntos Clave
+### 🎯 Puntos Clave
 - Enumeración SMB: Acceso a recursos públicos con credenciales anónimas
 - Análisis de documentación: Extracción de credenciales de manuales corporativos
 - MSSQL Enumeration: Uso de `xp_dirtree` para captura de hash NTLMv2
@@ -19,23 +19,23 @@ Sequel es una máquina Windows de dificultad media que simula un entorno empresa
 - ADCS ESC1: Explotación de plantillas de certificados vulnerables
 - Certificate Impersonation: Suplantación de identidad mediante certificados digitales
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 PuertoServicioDescripción53DNSServicio DNS del dominio88KerberosAutenticación del dominio135MSRPCLlamadas a procedimientos remotos139/445SMB/NetBIOSRecursos compartidos389/636LDAP/LDAPSDirectorio activo1433MSSQLBase de datos SQL Server5985WinRMAdministración remota de Windows🔥 Servicios críticos identificados:- SMB (445): Posible acceso a recursos compartidos
 - MSSQL (1433): Base de datos con potencial información sensible
 - WinRM (5985): Vector de acceso remoto
 - LDAP (389/636): Enumeración de usuarios del dominio
 
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ SMB (Puerto 445) - Acceso Inicial
+#### 🗂️ SMB (Puerto 445) - Acceso Inicial
 Ya que no disponemos de credenciales, comenzamos tratando de enumerar posibles recursos mediante una sesión nula:🎯 Recursos compartidos identificados:- Public → Acceso de lectura disponible ✅
 - IPC$ → Acceso de lectura para enumeración ✅
 - ADMIN$, C$, NETLOGON, SYSVOL → Sin acceso ❌
@@ -46,47 +46,47 @@ Ya que no disponemos de credenciales, comenzamos tratando de enumerar posibles r
 - Método de autenticación: SQL Server Authentication (no Windows Auth)
 - Instancia temporal en el controlador de dominio (será eliminada)
 🔑 Primera credencial obtenida: `PublicUser:GuestUserCantWrite1`
-####🗄️ MSSQL (Puerto 1433) - Escalada de Privilegios
+#### 🗄️ MSSQL (Puerto 1433) - Escalada de Privilegios
 Verificamos las credenciales encontradas en el documento PDF contra el servicio MSSQL:![](../../../../~gitbook/image.md)- SQL Server Authentication utilizada (sin `-windows-auth`)
 - Conexión exitosa al servidor SQL
 🔧 Enumeración de privilegios y capacidades![](../../../../~gitbook/image.md)⚠️ Limitaciones identificadas:- Usuario no tiene privilegios de `sysadmin`
 - No puede habilitar `xp_cmdshell` para ejecución de comandos
 - Acceso limitado a funciones administrativas
 🎯 Ataque de Captura de Hash NTLMv2 - xp_dirtreeConfiguramos un servidor SMB malicioso para capturar hashes:Forzamos la autenticación del servicio SQL contra nuestro servidor:🎉 Hash NTLMv2 capturado:🔓 Cracking del Hash![](../../../../~gitbook/image.md)🔑 Segunda credencial obtenida: `sql_svc:REGGIE1234ronnie`
-###🚀 Acceso Inicial
+### 🚀 Acceso Inicial
 
-####🔐 Acceso WinRM como sql_svc
+#### 🔐 Acceso WinRM como sql_svc
 
-####👥 Enumeración de usuarios del sistema
+#### 👥 Enumeración de usuarios del sistema
 🎯 Usuarios identificados:- Administrator → Objetivo principal
 - Ryan.Cooper → Usuario potencial (sin acceso actual)
 - sql_svc → Usuario actual
 
-###🕵️ Enumeración del Sistema
+### 🕵️ Enumeración del Sistema
 
-####📂 Búsqueda de información sensible
+#### 📂 Búsqueda de información sensible
 
-####🔍 Análisis de logs de SQL Server
+#### 🔍 Análisis de logs de SQL Server
 🚨 Información crítica encontrada en los logs:💡 Análisis de los logs:- Usuario `Ryan.Cooper` intentó autenticarse
 - La contraseña `NuclearMosquito3` fue enviada como nombre de usuario por error
 - Típico error humano durante el proceso de login
 🔑 Tercera credencial obtenida: `Ryan.Cooper:NuclearMosquito3`
-###🔄 Movimiento Lateral
+### 🔄 Movimiento Lateral
 
-####🎯 Acceso como Ryan.Cooper
+#### 🎯 Acceso como Ryan.Cooper
 
-####🏆 Primera Flag - User.txt
+#### 🏆 Primera Flag - User.txt
 
-####🔍 Análisis de membresías de grupo
+#### 🔍 Análisis de membresías de grupo
 🎯 Grupos críticos identificados:![](../../../../~gitbook/image.md)GrupoDescripciónImpactoBUILTIN\Certificate Service DCOM AccessAcceso a servicios de certificadosAlto - Potencial ESC1-ESC8BUILTIN\Remote Management UsersAcceso WinRMMedio - Ya explotadoSEQUEL\Domain UsersUsuarios del dominioBajo - Acceso estándar🚨 ¡Grupo crítico detectado! → `Certificate Service DCOM Access` sugiere presencia de Active Directory Certificate Services (ADCS)
-###💥 Escalada de Privilegios - ADCS ESC1
+### 💥 Escalada de Privilegios - ADCS ESC1
 
-####🔍 Enumeración de ADCS
+#### 🔍 Enumeración de ADCS
 📋 Autoridad Certificadora identificada:- CA Name: `sequel-DC-CA`
 - DNS Name: `dc.sequel.htb`
 - Status: Activa y funcional
 🎯 Plantilla vulnerable encontrada:
-####🧨 ¿Qué es la vulnerabilidad ESC1?
+#### 🧨 ¿Qué es la vulnerabilidad ESC1?
 ESC1 es una vulnerabilidad crítica de configuración en ADCS que permite la suplantación de identidad:🔴 Condiciones requeridas:- ✅ Enrollee Supplies Subject: El solicitante puede definir el subject del certificado
 - ✅ Client Authentication: El certificado permite autenticación de usuarios
 - ✅ Usuario tiene permisos de enrollment: Puede solicitar certificados
@@ -94,17 +94,17 @@ ESC1 es una vulnerabilidad crítica de configuración en ADCS que permite la sup
 - Escalada de privilegios sin conocer contraseñas
 - Compromiso total del dominio
 
-####🎫 Explotación - Solicitud de certificado malicioso
+#### 🎫 Explotación - Solicitud de certificado malicioso
 📋 Parámetros del ataque:ParámetroValorDescripción`-u``ryan.cooper@sequel.htb`Usuario autenticado legítimo`-ca``sequel-DC-CA`Autoridad certificadora objetivo`-template``UserAuthentication`Plantilla vulnerable ESC1`-upn``administrator@sequel.htb`Identidad suplantada`-pfx``administrator.pfx`Certificado malicioso generado
-####🎟️ Autenticación con certificado malicioso
+#### 🎟️ Autenticación con certificado malicioso
 🎉 ¡Hash del administrador obtenido!
-###👑 Compromiso Total del Sistema
+### 👑 Compromiso Total del Sistema
 
-####🚀 Pass-the-Hash Attack
+#### 🚀 Pass-the-Hash Attack
 
-####🏆 Flag Final - Root.txt
+#### 🏆 Flag Final - Root.txt
 
-####🛠️ Herramientas Utilizadas
+#### 🛠️ Herramientas Utilizadas
 HerramientaPropósitoFasenmapPort scanning y service enumerationReconocimientosmbclientEnumeración de recursos SMBEnumeraciónimpacket-mssqlclientConexión a SQL ServerAcceso Inicialimpacket-smbserverCaptura de hash NTLMv2EscaladahashcatCracking de hashesEscaladaevil-winrmAcceso remoto WindowsAcceso/Lateralcertipy-adExplotación ADCS ESC1Escalada FinalLast updated 9 months ago- [📝 Descripción](#descripcion)
 - [📊 Resumen de la Explotación](#resumen-de-la-explotacion)
 - [🎯 Puntos Clave](#puntos-clave)

@@ -1,6 +1,6 @@
 # Linux-hardening
 
-####Ubuntu/Debian (unattended-upgrades)
+#### Ubuntu/Debian (unattended-upgrades)
 
 ```
 sudo apt update
@@ -9,7 +9,7 @@ sudo apt install unattended-upgrades
 sudo dpkg-reconfigure --priority=low unattended-upgrades
 ```
 
-####Red Hat/CentOS (yum-cron)
+#### Red Hat/CentOS (yum-cron)
 
 ```
 sudo yum update
@@ -18,56 +18,56 @@ sudo systemctl enable yum-cron
 sudo systemctl start yum-cron
 ```
 
-####Find SUID binaries
+#### Find SUID binaries
 
 ```
 find / -perm -4000 2>/dev/null
 ```
 
-####Find world-writable files/directories
+#### Find world-writable files/directories
 
 ```
 find / -perm -o+w -type f 2>/dev/null
 find / -perm -o+w -type d 2>/dev/null
 ```
 
-####Check cron jobs (root)
+#### Check cron jobs (root)
 
 ```
 sudo crontab -l
 ```
 
-####Check cron jobs (user)
+#### Check cron jobs (user)
 
-####Check sudo privileges
+#### Check sudo privileges
 
-####Check home directories
+#### Check home directories
 
-####Check bash history
+#### Check bash history
 
-####Check for custom libraries (example)
+#### Check for custom libraries (example)
 
-####Remove unnecessary packages (example)
+#### Remove unnecessary packages (example)
 
-####SELinux status
+#### SELinux status
 
-####List users
+#### List users
 
-####List groups
+#### List groups
 
-####Check login attempts
+#### Check login attempts
 
-####Password policy (example)
+#### Password policy (example)
 
-####Rotate passwords (example)
+#### Rotate passwords (example)
 
-####Check /etc/security/opasswd (example)
+#### Check /etc/security/opasswd (example)
 
-####Clone Lynis
+#### Clone Lynis
 
-####Run Lynis audit
+#### Run Lynis audit
 
-##Key Hardening Practices:
+## Key Hardening Practices:
 - Updates and Patching:Importance: Addresses known vulnerabilities.
 - Tools: `unattended-upgrades` (Debian/Ubuntu), `yum-cron` (Red Hat).
 - Best Practices: Automate updates, prioritize security patches.
@@ -110,7 +110,7 @@ Key Enhancements and Considerations:- Security Baselines: Emphasize the importan
 - Kernel Hardening: More information could be given about kernel hardening best practices.
 - Network Hardening: More information could be given about network hardening best practices.
 - Security awareness training: Emphasize the importance of security awareness training for all users.
-Last updated 10 months ago
+
 ```
 crontab -l
 ```

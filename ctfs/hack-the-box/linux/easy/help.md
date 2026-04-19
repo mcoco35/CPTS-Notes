@@ -3,25 +3,25 @@
 ![](../../../../~gitbook/image.md)Publicado: 06 de Mayo de 2025
 Autor: José Miguel Romero aka x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Help" es una máquina Linux de dificultad fácil en HackTheBox que presenta una aplicación web vulnerable de mesa de ayuda (HelpDeskZ) y una API GraphQL. La explotación implica múltiples vectores: enumeración web, extracción de credenciales a través de GraphQL, explotación de SQLi en la aplicación web para obtener más credenciales, y finalmente una escalada de privilegios aprovechando una vulnerabilidad en el kernel de Linux.La máquina es particularmente útil para practicar técnicas de reconocimiento web, manipulación de APIs GraphQL, explotación de SQL Injection y escalada de privilegios mediante vulnerabilidades de kernel.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: El servicio HTTP redirige a `help.htb`. Debemos agregar este dominio a nuestro archivo hosts.
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 El servicio HTTP del puerto 80 muestra un sitio web con apache en construcción sin nada interesante:![](../../../../~gitbook/image.md)
-####Fuzzing de vhosts
+#### Fuzzing de vhosts
 No encontramos nada relevante.
-####Fuzzing de directorios
+#### Fuzzing de directorios
 Realizando fuzzing de directorios descubrimos un directorio llamado /support![](../../../../~gitbook/image.md)El sitio web está usando un servicio llamado HelpDeskZ aunque no sabemos a priori la versión.Haciendo una búsqueda sobre el proyecto en github encontramos que en el directorio raíz hay un fichero llamado UPGRADING.txthttps://github.com/ViktorNova/HelpDeskZ/blob/master/UPGRADING.txtEste fichero parece indicar entre cosas la versión. Veamos si podemos enumerar la versión en nuestro caso:http://help.htb/support/UPGRADING.txt![](../../../../~gitbook/image.md)Verificamos que es la versión 1.0.2 y esta versión es vulnerable a Arbitrary File Upload y a authenticated sql injection:https://www.exploit-db.com/exploits/40300![](../../../../~gitbook/image.md)https://www.exploit-db.com/exploits/41200![](../../../../~gitbook/image.md)Encontramos una sección que permite enviar tickets rellenando una serie de campos del formulario y además hay un módulo de subida de archivos. Creo que puede valer la pena analizar esté módulo para ver qué extensiones permite. Intentamos subir un archivo .php:Al acceder al puerto 3000 encontramos que el servicio nos devuelve un JSON indicando el siguiente mensaje:![](../../../../~gitbook/image.md)En la pestaña "Headers" vemos que en la respuesta está especificando que se está empleando Express.![](../../../../~gitbook/image.md)Googleando sobre «Express js query language» nos encontramos con resultados relacionados con GraphQL.Al navegar al recurso /graphql nos indica que falta por especificar un parámetro de tipo GET en la solicitud:![](../../../../~gitbook/image.md)A continuación intentamos consultar información. Un endpoint graphql toma objetos como entrada. Como necesitamos información relacionada con un usuario vamos a probar con un objeto usuario. Usamos jq para formatear la salida a JSON![](../../../../~gitbook/image.md)La respuesta nos indica que parece que la petición espera que se especifiquen subcampos. Probamos por ejemplo con el campo username o usernames:![](../../../../~gitbook/image.md)Encontramos un usuario, ahora podemos ir más allá e intentar también obtener el campo contraseña a ver si existe:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Parece que el campo contraseña es un hash MD5. Usamos hashcat para intentar crackearlo:![](../../../../~gitbook/image.md)Probamos estas credenciales en el panel de login anterior y logramos acceder:![](../../../../~gitbook/image.md)Anteriormente cuando enumeramos la versión de este software vimos que podía ser vulnerable a Arbitrary File Upload y Authenticated SQLi.![](../../../../~gitbook/image.md)El exploit no me funcionó con esta máquina, pero tras revisar el contenido pude entender lo que hacía para intentar realizar la explotación de forma manual.Lo primero que se requiere es crear un ticket adjuntando un archivo:![](../../../../~gitbook/image.md)A continuación, copiamos la url del adjunto en el navegador e interceptamos la petición con burp:Probamos añadiendo una inyección muy sencilla y confirmamos la vulnerabilidad:![](../../../../~gitbook/image.md)Enviando esto resulta en una condición verdadera que devuelve la imagen pero cambiándolo a 1=2 no lo hace porque se evalúa a falso. Esto confirma la vulnerabilidad SQLi.Podemos automatizar la inyección con sqlmap:Hay bastantes tablas por lo que una vez localizamos la que nos interesa lanzamos de nuevo sqlmap indicando la misma para hacer un dump:![](../../../../~gitbook/image.md)Obtenemos la contraseña de la cuenta Administrator: Welcome1Estas credenciales no funcionarion en el panel de /support de helpdesz. Tampoco funcionaron de primeras con ssh las combinaciones Administrator, admin, helpme, root, hasta que probé con help como usuario y pude autenticarme vía ssh:![](../../../../~gitbook/image.md)
-####Escalando privilegios
+#### Escalando privilegios
 Verificamos que el usuario help no puede ejecutar ningún comando como root:Al enumerar la versión del kernel parece que es una versión vulnerable:![](../../../../~gitbook/image.md)
 https://www.exploit-db.com/exploits/44298![](../../../../~gitbook/image.md)Creamos un fichero en el directorio /tmp de la máquina objetivo con el nombre exploit.c y el contenido del exploitA continuación lo compilamosLe damos permisos de ejecución y lo lanzamos:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)
@@ -154,26 +154,26 @@ Sorry, user help may not run sudo on help.
 // Tested on:
 // 4.4.0-116-generic #140-Ubuntu SMP Mon Feb 12 21:23:04 UTC 2018 x86_64
 // if different kernel adjust CRED offset + check kernel stack size
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
-#include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
+# include
 
-#define PHYS_OFFSET 0xffff880000000000
-#define CRED_OFFSET 0x5f8
-#define UID_OFFSET 4
-#define LOG_BUF_SIZE 65536
-#define PROGSIZE 328
+# define PHYS_OFFSET 0xffff880000000000
+# define CRED_OFFSET 0x5f8
+# define UID_OFFSET 4
+# define LOG_BUF_SIZE 65536
+# define PROGSIZE 328
 
 int sockets[2];
 int mapfd, progfd;

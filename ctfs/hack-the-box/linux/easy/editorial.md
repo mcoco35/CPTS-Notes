@@ -3,9 +3,9 @@
 ![](../../../../~gitbook/image.md)Publicado: 06 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Editorial es una máquina Linux de dificultad Easy de HackTheBox que simula un sitio web editorial donde se pueden publicar libros. La máquina presenta vulnerabilidades de SSRF (Server-Side Request Forgery) que permiten enumerar servicios internos, exposición de credenciales a través de una API interna, filtración de información sensible en repositorios Git, y escalada de privilegios mediante un script Python vulnerable que utiliza GitPython de forma insegura.El vector de ataque principal comienza con la explotación de SSRF para descubrir servicios internos, seguido de la obtención de credenciales a través de una API expuesta, movimiento lateral usando credenciales encontradas en el historial de Git, y finalmente escalada de privilegios aprovechando una configuración insegura de Git que permite ejecución de comandos arbitrarios.
-###🎯 Resumen de Vulnerabilidades
+### 🎯 Resumen de Vulnerabilidades
 - SSRF (Server-Side Request Forgery) - Puerto 80
 - Exposición de API interna - Puerto 5000
 - Credenciales hardcodeadas en respuestas de API
@@ -13,52 +13,52 @@ Editorial es una máquina Linux de dificultad Easy de HackTheBox que simula un s
 - Ejecución de comandos via Git remote-ext protocol
 - Configuración insegura de GitPython
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 / TCP - editorial.htb
+#### 80 / TCP - editorial.htb
 ![](../../../../~gitbook/image.md)Revisando el contenido del sitio web encontramos otro dominio que añadimos al scope por si pudiese revelar algo.![](../../../../~gitbook/image.md)
-####🕷️Fuzzing de directorios y vhosts
+#### 🕷️Fuzzing de directorios y vhosts
 Tras probar a realizar fuzzing con diversas herramientas como dirsearch, gobuster y feroxbuster, no encontramos ningún recurso que añadir a nuestro scope que pueda ser de utilidad ni tampoco ningún subdominio para editorial.htb ni tiempoarriba.htb.
 ####
 
-####📄 Análisis de la sección "Publish with us"
+#### 📄 Análisis de la sección "Publish with us"
 Vemos una función de carga de achivos que a priori no filtra por la extensión. Probamos a subir una web shell en php incrustada en una imagen e interceptamos la petición con burp:![](../../../../~gitbook/image.md)Observamos que existen dos parámetros en el formulario (bookfile y bookurl), Obtenemos en la respuesta la URL donde ha quedado alojado el archivo:![](../../../../~gitbook/image.md)Pero al tratar de acceder, parece que no se está ejecutando PHP en el sistema, ya que lo que hace es únicamente descargar el archivo:![](../../../../~gitbook/image.md)
-####🎯 Explotación - SSRF (Server-Side Request Forgery)
+#### 🎯 Explotación - SSRF (Server-Side Request Forgery)
 Cambiamos de estrategia y verificamos si podemos abusar del parámetro bookurl para explotar un SSRF. Para comprobar esto, hacemos una pequeña PoC, iniciamos en nuestro host de ataque un servidor web con python:En la solicitud, añadimos la ip de nuestro host de ataque:![](../../../../~gitbook/image.md)Recibimos la petición en nuestro servidor con un 200:![](../../../../~gitbook/image.md)
-####🔎 Enumeración de puertos internos
+#### 🔎 Enumeración de puertos internos
 Aprovechando la vulnerabilidad SSRF, verificamos si hay otros puertos o servicios ejecutándose internamente en la máquina:- Guardamos la solicitud desde Burp indicando con la palabra `FUZZ` donde queremos realizar el fuzzing
 - Utilizamos ffuf para realizar el ataque pasando como payload una lista numérica de 0 a 65535:
 ![](../../../../~gitbook/image.md)Y ahora con la herramienta ffuff realizar el ataque pasando como payload una lista numérica de 0 a 65535 que es el número posible de puertos:![](../../../../~gitbook/image.md)Obtenemos una única respuesta en el puerto 5000.
-####🔓 Acceso a API interna - Puerto 5000
+#### 🔓 Acceso a API interna - Puerto 5000
 Realizamos una petición SSRF al puerto 5000 interno y descargamos la respuesta:
 Hacemos ahora una petición a ese puerto para ver qué nos devuelve:![](../../../../~gitbook/image.md)Descargamos el enlace de la respuesta:![](../../../../~gitbook/image.md)Descubrimiento crítico: El servicio interno expone una API que revela múltiples endpoints:Leemos el contenido del fichero y vemos que parece que se trata de un JSON:![](../../../../~gitbook/image.md)Usamos jq para obtener un mejor formato de salida:
-####💎 Obtención de credenciales
+#### 💎 Obtención de credenciales
 ![](../../../../~gitbook/image.md)Probamos todos los endpoints descubiertos y encontramos que `/api/latest/metadata/messages/authors` responde con información sensible:¡Credenciales obtenidas!- Usuario: `dev`
 - Contraseña: `dev080217_devAPI!@`
 Obtenemos un usuario y una contraseña. Dado que disponemos de un servicio ssh en el puerto 22, merece la pena probar estas credenciales para ver si logramos ganar acceso a la máquina para obtener la primera flag en el directorio del usuario dev:
-####🔄 Movimiento lateral: dev → prod
+#### 🔄 Movimiento lateral: dev → prod
 Encontramos una carpeta llamada apps en el directorio del usuario /dev que vemos que contiene un repositorio gitEl comando `git status`muestra todos los archivos que estaban presentes en la última confirmación que ya no están allí, por lo que se muestran como eliminados:![](../../../../~gitbook/image.md)
-####📚 Análisis del historial Git
+#### 📚 Análisis del historial Git
 Examinamos el historial de commits para buscar información sensible:Análisis de diferencias entre commits:Podemos ver diferencias de cambios entre varios commits con el siguiente comando:![](../../../../~gitbook/image.md)¡Credenciales encontradas! Al comparar commits, descubrimos que se subieron credenciales del usuario de producción que posteriormente fueron eliminadas:- Usuario: `prod`
 - Contraseña: `080217_Producti0n_2023!@`
 
-####⬆️ Escalada de privilegios: prod → root
+#### ⬆️ Escalada de privilegios: prod → root
 🔍 Enumeración de permisos sudoVerificamos si el usuario prod puede ejecutar algo como root:Verificamos los permisos que tiene el usuario prod sobre este script y vemos que puede leerlo y ejecutarlo:Revisamos el contenido del script para analizarlo:
-####🚨 Identificación de la vulnerabilidad
+#### 🚨 Identificación de la vulnerabilidad
 Vulnerabilidades encontradas:- Falta de sanitización del input del usuario (`url_to_clone`)
 - Configuración peligrosa: `protocol.ext.allow=always` habilitado
 - Ejecución con privilegios root via sudo
 - Uso de git-remote-ext que permite ejecución de comandos locales
 El protocolo `ext::` de Git permite ejecutar comandos como si fueran servidores remotos, y la configuración `protocol.ext.allow=always` elimina todas las restricciones de seguridad.
-####💥 Explotación
+#### 💥 Explotación
 Paso 1: Creamos un script malicioso que se ejecutará como root:Paso 2: Ejecutar el script con `git-remote-ext`.Esto funciona porque `ext::<cmd>` hace que Git ejecute el comando como un "servidor remoto", y con `protocol.ext.allow=always`, no hay restricciones.Paso 3: , usamos la shell con SUID para escalar a root:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🎯 Resumen de Vulnerabilidades](#resumen-de-vulnerabilidades)
 - [🔭 Reconocimiento](#reconocimiento)
@@ -294,7 +294,7 @@ prod@editorial:~$ ls -la /opt/internal_apps/clone_changes/clone_prod_change.py
 ```
 
 ```
-#!/usr/bin/python3
+# !/usr/bin/python3
 import os
 import sys
 from git import Repo

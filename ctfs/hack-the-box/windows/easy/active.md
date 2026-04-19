@@ -5,64 +5,64 @@ Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
 OS: Windows
 Técnicas: GPP Password Decryption, Kerberoasting, SMB Enumeration
-###📝 Descripción
+### 📝 Descripción
 Active es una máquina Windows de dificultad Easy que simula un entorno de Active Directory real. La explotación se centra en la enumeración de recursos SMB accesibles sin autenticación, donde encontramos archivos de Group Policy Preferences (GPP) que contienen credenciales cifradas con una clave conocida públicamente.Una vez obtenidas las credenciales del usuario de servicio `SVC_TGS`, aprovechamos que este usuario está configurado con un SPN (Service Principal Name) para realizar un ataque de Kerberoasting, obteniendo el hash TGS del usuario Administrator y crackeándolo offline para conseguir acceso completo al dominio.Esta máquina es perfecta para practicar técnicas fundamentales de enumeración en entornos Active Directory y entender las vulnerabilidades asociadas a configuraciones incorrectas de Group Policy Preferences.
-###🎯 Puntos Clave
+### 🎯 Puntos Clave
 - 🔍 Enumeración SMB sin credenciales
 - 🔐 Explotación de Group Policy Preferences (GPP)
 - 🎫 Kerberoasting Attack
 - 📊 Enumeración de Active Directory
 - 🛡️ Escalada de privilegios en entornos Windows
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 PuertoServicioDescripción53DNSMicrosoft DNS Server88KerberosAutenticación de dominio389/636LDAP/LDAPSDirectorio Active Directory445SMBRecursos compartidos464KpasswdCambio de contraseñas Kerberos
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ 445 SMB
+#### 🗂️ 445 SMB
 Ya que no disponemos de credenciales, comenzamos tratando de enumerar recursos con una null session:![](../../../../~gitbook/image.md)🎉 Encontramos que el recurso `Replication` es accesible con permisos de lectura sin autenticación.
-####📁 Descarga del contenido de Replication
+#### 📁 Descarga del contenido de Replication
 ![](../../../../~gitbook/image.md)
-####🔍 Análisis de Group Policy Preferences
+#### 🔍 Análisis de Group Policy Preferences
 En el directorio `/Active/Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/MACHINE/Preferences/Groups/` encontramos un archivo Groups.xml que contiene credenciales cifradas:
-###🔐 Explotación de GPP (Group Policy Preferences)
+### 🔐 Explotación de GPP (Group Policy Preferences)
 
-####🧠 ¿Qué es GPP y por qué es vulnerable?
+#### 🧠 ¿Qué es GPP y por qué es vulnerable?
 Group Policy Preferences fue introducido en Windows Server 2008 para permitir a los administradores configurar ajustes que no estaban disponibles en las configuraciones tradicionales de Group Policy.El problema: Microsoft utilizó una clave AES estática y públicamente conocida para cifrar las contraseñas en los archivos XML de GPP.
-####🔓 Descifrando la contraseña
+#### 🔓 Descifrando la contraseña
 🧰 Método 1: gpp-decrypt (Recomendado)🧰 Método 2: Script Python personalizado
-####🎯 Credenciales Obtenidas
+#### 🎯 Credenciales Obtenidas
 
-###🔑 Acceso Inicial
+### 🔑 Acceso Inicial
 
-####📊 Validación de credenciales
+#### 📊 Validación de credenciales
 ![](../../../../~gitbook/image.md)✅ ¡Credenciales válidas! Ahora tenemos acceso al recurso `Users`.
-####🏁 Obteniendo la User Flag
+#### 🏁 Obteniendo la User Flag
 🎉 User Flag obtenida!
-###🎫 Escalada de Privilegios - Kerberoasting
+### 🎫 Escalada de Privilegios - Kerberoasting
 
-####🔍 ¿Qué es Kerberoasting?
+#### 🔍 ¿Qué es Kerberoasting?
 Kerberoasting es una técnica que aprovecha cuentas de servicio configuradas con SPNs (Service Principal Names) para extraer hashes TGS que pueden ser crackeados offline.Enumeramos usuarios y formateamos la salida para volcarlos a un fichero de texto:![](../../../../~gitbook/image.md)
-####🎯 Enumeración de usuarios con SPN
+#### 🎯 Enumeración de usuarios con SPN
 
-####💎 Extracción del hash TGS
+#### 💎 Extracción del hash TGS
 
-####🔨 Cracking del hash
+#### 🔨 Cracking del hash
 Una vez obtenido el hash del TGS del usuario Administrator podemos intentar crackearlo offline usando John/Hashcat con el dicccionario rockyou.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🏆 Credenciales de Administrator
+#### 🏆 Credenciales de Administrator
 
-###👑 Acceso como Administrator
+### 👑 Acceso como Administrator
 
-####🚀 Conexión con privilegios administrativos
+#### 🚀 Conexión con privilegios administrativos
 ![](../../../../~gitbook/image.md)
-####🏁 Root Flag
+#### 🏁 Root Flag
 🎉 Root Flag obtenida!Last updated 9 months ago- [📝 Descripción](#descripcion)
 - [🎯 Puntos Clave](#puntos-clave)
 - [🔭 Reconocimiento](#reconocimiento)

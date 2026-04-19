@@ -3,29 +3,29 @@
 ![](../../../../~gitbook/image.md)Publicado: 14 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Keeper es una máquina Linux de dificultad fácil que presenta un servidor web con una aplicación de gestión de tickets (Request Tracker) vulnerable a credenciales por defecto. La máquina sigue un camino de explotación enfocado en la reutilización de credenciales y el análisis forense de memoria para obtener acceso a información sensible. Se aprovecha una vulnerabilidad de KeePass (CVE-2023-32784) para extraer una contraseña maestra de un volcado de memoria, lo que permite obtener acceso a credenciales privilegiadas almacenadas en una base de datos de KeePass. El desafío también requiere conocimientos sobre conversión de formatos de claves SSH para obtener acceso como usuario root.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 ![](../../../../~gitbook/image.md)⚠️ Importante: El servicio HTTP menciona que para crear un ticket visitemos el dominio tickets.keeper.htb. Debemos agregar este dominio a nuestro archivo hosts.Una vez añadido nos redirige correctamente:![](../../../../~gitbook/image.md)Una pequeña búsqueda en google sobre las credenciales por defecto del aplicativo Request tracker nos aporta la información necesaria para autenticarnos con éxito:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Enumerando la aplicación en la seccion Admin > Users > Select vemos que existen dos usuarios, el usuario actual con el que nos hemos autenticado "root" y otro llamado Inorgaard![](../../../../~gitbook/image.md)En el detalle del usuario vemos que en el campo comentarios hay una contraseña inicial con la que se estableció el usuario:![](../../../../~gitbook/image.md)Nos autenticamos en Request Tracker usando las credenciales de este usuario `lnorgaard:Welcome2023!`Al acceder vemos que tiene un ticket:![](../../../../~gitbook/image.md)
-####Foothold
+#### Foothold
 Probamos a utilizar estas credenciales tambien con el servicio SSH:Obtenemos la primera flag:
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Enumeramos la máquina y vemos que en el mismo directorio de la flag hay un fichero comprimido. Tras descomprimirlo vemos que se trata del dump de keepass que mencionaba el usuario lnorgaard en el ticket en Request TrackerEl fichero passcodes.kdbx puede ser de gran utilidad.![](../../../../~gitbook/image.md)Para ello, lo transferimos a nuestro host de ataque usando scpA continuación usamos la herramienta keepass2john.py para extraer un hash que sea crackeable por la herramienta john the ripper:![](../../../../~gitbook/image.md)NOTA: Revisar si está bien copiado el hash porque a veces no se genera en una única línea y da problemas a la hora de que lo reconozca hashcat o john.Tras dejar a Hashcat trabajar durante bastante tiempo, no logra obtener la contraseña maestra.
-###💻 Explotación
+### 💻 Explotación
 
-####🔓 CVE-2023-32784
+#### 🔓 CVE-2023-32784
 Explorando otras opciones y buscando información sobre keepass, descubrimos que hay un CVE relacionado con una vulnerabilidad en KeepassLa vulnerabilidad permite extraer la clave maestra en texto plano de la memoria del proceso en ejecución. Esta clave permitirá a un atacante acceder a todas las credenciales almacenadas.Dado que en esta ocasión, también disponemos de un dump de keepass, procedemos a descargarlo y usarlo con la herramienta [keepass-password-dumper](https://github.com/vdohney/keepass-password-dumper)Necesitaremos una máquina windows donde ejecutar la aplicación:También podemos usar este script en python desde LInux:https://github.com/z-jxy/keepass_dumpHay dos caracteres que están ocultos y la palabra a priori no tiene mucho sentido. Si recordamos, el usuario tenía configurado el idioma en danés, hacemos una búsqueda en Google de esta palabra y vemos lo siguiente![](../../../../~gitbook/image.md)Parece ser un postre danés. Probamos a cargar el archivo en keepass introduciendo la contraseña obtenida como clave maestra:![](../../../../~gitbook/image.md)En el interior encontramos una clave ssh para el usuario root y una contraseña:![](../../../../~gitbook/image.md)Esto no es una clave id_rsa al uso, sino que está en un formato para que pueda ser operable por la herramienta Putty.
 Para usar esta clave en Linux, primero hay que convertirla a un formato que openssh pueda entender `sudo apt install putty-tools`).Para ello, guardamos también el contenido en un fichero de texto asegurando de liminar cualquier espacio en blanco.A continuación transformamos la clave usando:De tal forma que ya tendremos nuestra clave en el formato que necesitamos:![](../../../../~gitbook/image.md)Ahora únicamente nos queda darle permisos 600 al fichero y conectarnos vía ssh y obtener la flag:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)

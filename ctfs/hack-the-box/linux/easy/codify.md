@@ -3,29 +3,29 @@
 ![](../../../../~gitbook/image.md)Publicado: 15 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Codify es una máquina Linux de dificultad fácil que aloja una aplicación web que permite a los usuarios ejecutar código Node.js en un entorno sandbox. La vulnerabilidad principal se encuentra en la versión desactualizada de la librería vm2 (v3.9.16) utilizada para implementar el sandbox, la cual permite escapar de las restricciones y ejecutar comandos en el sistema operativo subyacente. La escalada de privilegios se logra aprovechando un script de backup de MySQL al que el usuario comprometido tiene acceso sudo, explotando una vulnerabilidad en la validación de contraseñas que permite obtener credenciales de root.Este laboratorio presenta un recorrido educativo sobre vulnerabilidades en ambientes sandbox, explotación de aplicaciones web Node.js y técnicas de escalada de privilegios en sistemas Linux a través de scripts con validaciones insuficientes.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 http://codify.htb/![](../../../../~gitbook/image.md)Enontramos una aplicación que permite probar Node.js dentro de un sanbox:![](../../../../~gitbook/image.md)Aunque una sección ya nos avisa de que hay algunas limitaciones:![](../../../../~gitbook/image.md)También enumeramos la librería que están empleando para crear el sandbox:![](../../../../~gitbook/image.md)Usamos el siguiente payload para intentar escapar del sandboxPero nos encontramos con una de las limitaciones:![](../../../../~gitbook/image.md)Volviendo a la versión de la librería vm2 que se está utilizando para el sandbox:
 https://gist.github.com/leesh3288/381b230b04936dd4d74aaf90cc8bb244
-###💻 Explotación
+### 💻 Explotación
 Existe una vulnerabilidad en la desinfección de excepciones de vm2 para versiones hasta 3.9.16, que permite a los atacantes generar una excepción de host no desinfectada dentro de handleException() que se puede usar para escapar del entorno protegido y ejecutar código arbitrario en el contexto del host.Usaremos el siguiente exploit
 https://www.exploit-db.com/exploits/51898Verificamos que la PoC funciona correctamente:![](../../../../~gitbook/image.md)Si reemplazamos el comando por una shell basada en FIFO:Iniciamos previamente el listener en nuestro host de ataque:Ganamos acceso a la máquina:![](../../../../~gitbook/image.md)
-####Mejora de la shell
+#### Mejora de la shell
 
-####Foothold
+#### Foothold
 Enumerando la máquina encontramos un fichero de base de datos que contiene un hash de tipo bcrypt del usuario joshua:![](../../../../~gitbook/image.md)Confirmamos que es un hash de tipo bcrypt:![](../../../../~gitbook/image.md)Intentamos crackearlo usando hashcat y rockyouObtenemos con éxito la contraseña `spongebob1` para el usuario joshua.![](../../../../~gitbook/image.md)Nos autenticamos como joshua en el host comprometido y obtenemos la flag:
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Verificamos ahora si joshua puede ejecutar algún comando, script o binario como root:Echamos un ojo al contenido del scriptVemos que el script lo que hace es crear una copia de seguridad de la base de datos, para ello define el usuario que va a utilizar para la conexión (en este caso root) y lee la contraseña del directorio /root/.creds.A continuación pide una contraseña al usuario y la compara con la la que hay almacenada en el directorio /root/.creds. SI es correcta crea un archivo llamado mysql directorio en /var/backups/A continuación se conecta a la base de datos y crea un backup para cada una de las bases de datos.Lo más relevante de este script y por donde puede venir nuestro vector de ataque, es que no se está sanitizando el parámetro DB_PASS introducido por el usuario, simplemente se realiza una comparación y en caso de no ser iguales sale del script, pero y si buscamos la forma de que no se evalúe esa condición, por ejemplo mediante la introducción de algún carácter especial como: `* ? [` podremos hacer que rompa la condición y el script continúe y se complete realizando el backup:En este caso introducimos un wildcard o asterisco como contraseña y vemos que logramos eludir la comprobación de la contraseña y crear el backupNuestro éxito es efímero ya que descubrimos que el usuario joshua no tiene permisos para leer el contenido de /var/backups/mysql![](../../../../~gitbook/image.md)Otra cosa que podríamos hacer es que una vez que ya ha pasado la validación y usa la variable DB_PASS para conectarse a la base de datos, intentar ver su valor. Para ello podríamos usar la herramienta pspy:Descargamos el binarioLo transferimos al host comprometidoA continuación lo ejecutamos![](../../../../~gitbook/image.md)A continuación desde la otra terminal lanzamos el script volviendo a introducir como contraseña el carácter especial * :Y en la terminal de pspy deberemos ver el contenido de la variable DB_PASS![](../../../../~gitbook/image.md)Verificamos que está reutilizando la contraseña para el usuario root de la máquina y capturamos la flag:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
@@ -183,7 +183,7 @@ joshua@codify:~$
 ```
 
 ```
-#!/bin/bash
+# !/bin/bash
 DB_USER="root"
 DB_PASS=$(/usr/bin/cat /root/.creds)
 BACKUP_DIR="/var/backups/mysql"

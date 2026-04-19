@@ -3,37 +3,37 @@
 ![](../../../../~gitbook/image.md)Publicado: 04 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Pandora es una máquina Linux de dificultad fácil que presenta múltiples vectores de ataque interesantes. La explotación comienza con el descubrimiento de credenciales a través del servicio SNMP mal configurado, lo que permite el acceso SSH inicial. Posteriormente, se requiere realizar port forwarding para acceder a un servicio web interno (Pandora FMS) que es vulnerable a inyección SQL (CVE-2021-32099). Esta vulnerabilidad permite la autenticación como administrador y la posterior carga de una web shell para obtener ejecución remota de código. Finalmente, la escalada de privilegios se logra mediante la explotación de un binario SUID personalizado que es vulnerable a ataques de PATH hijacking.La máquina enseña conceptos importantes como enumeración SNMP, port forwarding, explotación de vulnerabilidades web conocidas, y técnicas de escalada de privilegios mediante manipulación del PATH.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos TCP
+#### Escaneo de puertos TCP
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-####Escaneo de puertos UDP
+#### Escaneo de puertos UDP
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 Accedemos al sitio web y usamos la extensión wappalyzer para ver si vemos un poco las tecnologías usadas:![](../../../../~gitbook/image.md)Fuzzing de directoriosTras probar a realizar fuzzing de directorios don feroxbuster y dirsearch, no encontramos nada.
-####161(UDP) SNMP
+#### 161(UDP) SNMP
 Probamos a realizar fuerza bruta sobre el puerto 161 del servicio SNMP con la herramienta SNMP brute para ver qué comunidades descubrimos:![](../../../../~gitbook/image.md)Usamos la herramienta snmp-check para enumerar en detalle sobre las comunidades descubiertas:Al revisar el fichero de salida, en el apartado de procesos, encontramos un proceso que está haciendo uso de unas credenciales:![](../../../../~gitbook/image.md)
-####🔐 Acceso Inicial
+#### 🔐 Acceso Inicial
 Usamos las credenciales obtenidas para el usuario daniel para conectarnos a través del servicio SSH del puerto 22:
-####🔄 Movimiento Lateral
+#### 🔄 Movimiento Lateral
 Enumeramos los usuarios en la máquina y vemos que la flag está en el directorio del usuario matt pero no tenemos permisos:Comprobamos que daniel no puede ejecutar sudo en la máquina:Configuración de servicios webComo ya habíamos enumerado anteriormente el servidor web que se está usando es apache. La configuración de los sitios de Apache se define en `/etc/apache2/sites-enabled`. En este caso vemos que hay dos:Descubrimos un virtual host llamado pandora.panda.htb pero se está ejecutando en localhost y vemos la ruta a la que enlaza `/var/www/pandora`Enumeramos los ficheros en el directorio pandora y verificamos si hay algún directorio sobre el que Daniel tenga permisos de escritura pero no hay.Encontramos un fichero de configuración pero Daniel no tiene permisos para leerlo:
-####Port forwadding pandora.panda.htb
+#### Port forwadding pandora.panda.htb
 Como no encontramos ningún vector de ataque ni credenciales que nos permitan movernos lateralmente, aprovechando que tenemos conexión vía ssh para usar realizar un redireccionamiento del puerto 80 del host de la máquina comprometida al puerto 9000 de nuestro host de ataque para enumerar este servicio.A continuación añadimos al fichero /etc/host de nuestro host de ataque la resolución del vhost pandora.panda.htb a localhostUna vez hecho, si abrimos en el navegador la dirección : http://localhost:9000 somos redireccionados al servicio de `Pandora FMS` console:http://localhost:9000/pandora_console/![](../../../../~gitbook/image.md)Probamos con las credenciales por defecto de este servicio que son `admin:pandora` pero no tenemos éxito.En la parte inferior de la web vemos una versión: v7.0NG.742_FIX_PERL2020 y buscando exploits para esta aplicación encontramos que hay varias vulnerabilidades para esta versión del servicio y una de ellas explota una vulnerabilidad SQLi.
-####🎯 Explotación
+#### 🎯 Explotación
 CVE-2021-32099Esta vulnerabilidad se encuentra en el fichero chart_generator.php en el cual hay un parámetro session_id el cual no está siendo debidamente sanitizado y permite una inyección SQL Union.Esto podemos verificarlo haciendo una sencilla prueba añadiendo un carácter ' al paráemetro de entrada:http://localhost:9000/pandora_console/include/chart_generator.php?session_id=1%27![](../../../../~gitbook/image.md)Hacemos algunas pruebas de forma manual, por ejemplo para determinar el número de columnas:![](../../../../~gitbook/image.md)Verificamos que hay 3 columnas porque ya no devuelve error. Automatizamos esta inyección con el siguiente exploit público:https://github.com/shyam0904a/Pandora_v7.0NG.742_exploit_unauthenticatedEl resumen de lo que hace este exploit es que aplica una inyección SQL sobre el parámetro session_id mal sanitizado del componente chart_generator.php como habíamos visto anteriormente para lograr robar la cookie del usuario admin y una vez autenticado subir una php shell en la máquina de forma que con ella podremos obtener una RCE.Iniciamos un listener con netcatDescargamos y ejecutamos el exploitLa ejecución nos abre ya una shell pero también podemos usarla manualmente en el endpoint que se indica sobre el archivo pwn.php?test=![](../../../../~gitbook/image.md)Usaremos la siguiente bash shell:Codificándola previamente a formato URL:Obtenemos la RCE y ganamos acceso como usuario matt:
-####Mejora de la tty
+#### Mejora de la tty
 Obtenemos la flag en el directorio del usuario matt:
-####🚀 Escalada de matt a root
+#### 🚀 Escalada de matt a root
 Parece que hay un problema con la shell actual y no permite ejecutar ciertos comandos:También verificamos si hay binarios con permisos SUID de los que podamos abusar:Entre los resultados hay un binario que no es habitual llamado pandora_backup y comprobamos que el propietario es root y grupo al que pertenece es matt:Dado que el binario tiene el bit SUID, esto permite que podamos ejecutar este binario como root pero parece que falla, posiblemente debido a algún problema con la terminal y mismo motivo por el que no podemos ejecutar sudo -l.
-####Conexión mediante SSH
+#### Conexión mediante SSH
 Aquí podemos hacer una cosa, podemos generar un par de claves ssh para el usuario matt y así poder conectarnos por ssh y estar una shell más estable. Para ello hacemos lo siguiente:Creamos una copia de id_rsa.pub y la renombramos a authorized_keys y le damos permisos 600 para que únicamente el propietario pueda manipular el archivo:Nos copiamos el la clave privada y desde nuestro host de ataque, la guardamos en un archivo, le damos permisos 600 y la usamos para conectarnos con el usuario matt:Una vez dentro hacemos un `export TERM=xterm` y verificamos que ya podemos lanzar `sudo -l` y el script `/usr/bin/pandora_backup` sin fallos:![](../../../../~gitbook/image.md)No tenemos la herramienta strings instalada en el host sí tenemos la utilidad ltrace y así poder ver un poco el contenido del binario compilado:Vemos que lo que hace es usar el comando tar de forma relativa y no absoluta, por lo que podemos hacer un ataque de PATH Hijacking En binarios compilados introducir otros binarios con rutas relativas tiene mucho riesgo y más si ese binario se ejecuta como root.Para explotar esto, primero cremos un archivo en /tmp que se llame tar cuyo contenido será simplemente una llamada a /usr/bin/sh y le damos permisos de ejecución.Verificamos el contenido de la variable PATH:Ahora simplemente añadimos el directorio /tmp al PATH y dado que el contenido del PATH se lee de izquierda a derecha, encontrará primero el archivo tar que hemos definido en tmp y ejecutará este en lugar del que hay en /usr/bin/tar:Si ahora de nuevo comprobamos lo que vale la variable PATH:Si ahora ejecutamos el binario de nuevo logramos ganar acceso como root:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
@@ -226,7 +226,7 @@ http://localhost:9000/pandora_console/include/chart_generator.php?session_id=1' 
 ```
 
 ```
-#!/usr/bin/python3
+# !/usr/bin/python3
 
 # MIT License
 
@@ -269,8 +269,8 @@ host=args.target
 file_name=args.filename
 base_path=f'http://{host}/pandora_console'
 
-#Exploit Injection
-#http://127.0.0.1/pandora_console/include/chart_generator.php?session_id=' union SELECT 1,2,'id_usuario|s:5:"admin";' as data -- SgGO
+# Exploit Injection
+# http://127.0.0.1/pandora_console/include/chart_generator.php?session_id=' union SELECT 1,2,'id_usuario|s:5:"admin";' as data -- SgGO
 
 print(f"URL:  {base_path}")
 print("[+] Sending Injection Payload")

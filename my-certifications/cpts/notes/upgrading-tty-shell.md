@@ -37,11 +37,11 @@ awk
 awk 'BEGIN{system("/bin/sh")}'
 ```
 Find
-####using Exec to launch the shell
+#### using Exec to launch the shell
 
-####vim
+#### vim
 ``Vim Escapepermission
-##Stabilize Shell
+## Stabilize Shell
 Steps to Stabilize Your Shell- Upgrade to an Interactive Shell
 If `python3` is unavailable, try:This gives you job control and allows using built-in commands like `su`.- Set Terminal Type
 This ensures compatibility with commands like `clear` and `vim`.- Background the Shell Press:

@@ -3,43 +3,43 @@
 ![](../../../../~gitbook/image.md)Publicado: 04 de Mayo de 2025
 Autor: José Miguel Romero aka x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Esta máquina Linux explota una vulnerabilidad de ejecución de código arbitrario en la biblioteca Python Searchor para obtener acceso inicial. Posteriormente, se escalan privilegios aprovechando permisos sudo en un script de Python sin la adecuada sanitización.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: El servicio HTTP redirige a `searcher.htb`. Debemos agregar este dominio a nuestro archivo hosts.
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 Al acceder a la web, descubrimos un motor de búsqueda unificado que genera URLs de consulta para varios motores de búsqueda.![](../../../../~gitbook/image.md)Realizando fuzzing de vhosts descrubirmos un vhost llamado gitea que añadimos también a nuestro fichero /etc/hosts![](../../../../~gitbook/image.md)
-####Hallazgo clave
+#### Hallazgo clave
 En el pie de página, se revela que la aplicación usa Searchor v2.4.0. Una investigación rápida muestra que esta versión es vulnerable a ejecución de código arbitrario y un exploit público:https://github.com/nikn0laty/Exploit-for-Searchor-2.4.0-Arbitrary-CMD-Injection![](../../../../~gitbook/image.md)El problema radica en el uso inseguro de la función `eval()` de Python.
-###💉 Explotación
+### 💉 Explotación
 
-####Payload para prueba de concepto
+#### Payload para prueba de concepto
 
-####Reverse Shell
+#### Reverse Shell
 Descargamos el exploitLe concedemos permisos de ejecuciónIniciamos un listener en nuestro host de ataqueEjecutamos el exploit indicando la URL del objetivo y nuestra IP y puerto del host de ataque para ganar acceso al objetivo:![](../../../../~gitbook/image.md)Esto mismo se podría hacer también usando el siguiente payload interceptando la petición con la herramienta Burp Suite:¡Éxito! Hemos obtenido acceso al sistema como usuario `svc`.
-####Flag de Usuario
+#### Flag de Usuario
 
-###🔐 Escalada de Privilegios
+### 🔐 Escalada de Privilegios
 
-####Descubrimiento de credenciales
+#### Descubrimiento de credenciales
 En el directorio `/var/www/app`, encontramos un repositorio Git:Examinando la configuración de Git, descubrimos credenciales:🔑 Credenciales descubiertas: `cody:jh1usoih2bkjaspwe92`Verificamos que se está haciendo de una mala práctica de re-utilización de contraseñas y el usuario svc también usa esta contraseña, por lo que podemos ganar acceso a la máquina a través del puerto ssh con el usuario svc y de esta forma ganar persistencia.
-####Permisos sudo
+#### Permisos sudo
 Comprobamos los permisos sudo del usuario `svc`:
-####Análisis del script vulnerable
+#### Análisis del script vulnerable
 Descubrimos que el usuario svc no tiene permisos de escritura ni lectura pero podemos ejecutar `system-checkup.py` como root:![](../../../../~gitbook/image.md)Uso del parámetro docker-ps del script `system-checkup.py`![](../../../../~gitbook/image.md)Uso del parámetro docker-inspect del script `system-checkup.py`![](../../../../~gitbook/image.md)Podemos obtener más información sobre el parámetro `<format>`en la siguiente documentación de dockerhttps://docs.docker.com/reference/cli/docker/inspect/Podemos utilizar {{json .}} como el argumento de formato requerido por el argumento docker-inspect del script.Para leer la salida JSON convenientemente, podemos utilizar jq para analizar la salida JSON en un formato legible. jq
 puede ser instalado utilizando el siguiente comando, sin embargo, ya está presente en la máquina de destino.Ejecutamos el script con los parámetros adecuados sobre el conteendor de gitea:🔑 Credenciales descubiertas: `yuiu1hoiu4i5ho1uh`Esta contraseña nos permite autenticarnos en el vhost http://gitea.searcher.htb como usuario Administrator y acceder al repositorio de script, pudiendo de esta forma analizar su contenido:![](../../../../~gitbook/image.md)Al revisar el script comprobamos que si pasamos como argumento la opción "full-checkup" ejecuta el script ./full-checkup.sh:![](../../../../~gitbook/image.md)
-####Explotación del script
+#### Explotación del script
 Aprovechamos la referencia relativa a full-checkup.sh ejecutando el script system-checkup desde otro directorio que contendrá nuestro propio script malicioso full-checkup.sh.Creamos una reverse shell con el siguiente contenido:Lo hacemos ejecutableIniciamos un listener en el puerto 9001Por útimo, lanzamos de nuevo el script desde el directorio /tmp para que abusando de la ruta relativa se ejecute el script full-checkup.sh malicioso con nuestra reverse shell:![](../../../../~gitbook/image.md)
-####Flag de root
-Last updated 10 months ago- [📝 Descripción](#descripcion)
+#### Flag de root
+
 - [🚀 Metodología](#metodologia)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)

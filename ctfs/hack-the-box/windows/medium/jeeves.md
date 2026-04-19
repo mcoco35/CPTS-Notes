@@ -3,52 +3,52 @@
 ![](../../../../~gitbook/image.md)Publicado: 11 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Jeeves es una máquina Windows de dificultad media que presenta múltiples vectores de ataque interesantes. La máquina ejecuta un servidor web IIS en el puerto 80 con una aplicación de búsqueda vulnerable, y un servidor Jetty en el puerto 50000 que expone una consola de Jenkins. El vector principal de acceso inicial se obtiene a través de la explotación de la consola de scripts de Jenkins, que permite la ejecución remota de código. Para la escalada de privilegios, se requiere el análisis de un archivo KeePass encontrado en el sistema, cuya contraseña se puede crackear offline, revelando credenciales que incluyen un hash NTLM del administrador. La escalada final se logra mediante un ataque de Pass-the-Hash, y la flag final está oculta en un flujo de datos alternativo (ADS) del sistema de archivos NTFS.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🔐 Servicios Encontrados
+### 🔐 Servicios Encontrados
 
-####🗂️ 445 TCP - SMB
+#### 🗂️ 445 TCP - SMB
 Verificamos si podemos enumerar algo de información mediante una NULL Session pero no parece posible:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🌍 Puerto 80 - HTTP (IIS)
+#### 🌍 Puerto 80 - HTTP (IIS)
 Al acceder al servicio expuesto en el puerto 80 en http://10.10.10.63/ encontramos una aplicación llamada Jeeves que parece ser un Buscador:![](../../../../~gitbook/image.md)Probamos la funcionalidad de búsqueda y recibimos un mensaje de error de base de datos que nos revela información valiosa:- Base de datos: Microsoft SQL Server 2005 9.00.4053
 - Directorio revelado en el mensaje de error
 ![](../../../../~gitbook/image.md)En el mensaje vemos un directorio:![](../../../../~gitbook/image.md)Realizamos fuzzing de directorios pero no encontramos nada de utilidad que podamos usar como vector de ataque.
-####🚀 Puerto 50000 - HTTP (Jetty)
+#### 🚀 Puerto 50000 - HTTP (Jetty)
 Al acceder a este servicio en [http://10.10.10.63:50000/](http://10.10.10.63:50000/) encontramos:- Error 404 Not Found
 - Banner: Jetty 9.4.z-SNAPSHOT (versión en desarrollo)
 ![](../../../../~gitbook/image.md)🔍 Fuzzing de directoriosAl realizar fuzzing de directorios usando gobuster encontramos un recurso crítico:Recurso encontrado: `/askjeeves`![](../../../../~gitbook/image.md)Recurso encontrado: `/askjeeves`
-###💥 Explotación - Acceso Inicial
+### 💥 Explotación - Acceso Inicial
 
-####🎯 Jenkins Script Console
+#### 🎯 Jenkins Script Console
 Accedemos al recurso [http://10.10.10.63:50000/askjeeves](http://10.10.10.63:50000/askjeeves) y descubrimos que tenemos acceso al Script Console de Jenkins sin autenticación:![](../../../../~gitbook/image.md)🧪 Prueba de Concepto (PoC)Relizamos una PoC ejecutando el siguiente código para ver si logramos enumerar el usuario de la máquina:Resultado: Usuario `kohsuke` confirmado![](../../../../~gitbook/image.md)Ahora iniciamos un listener en nuestro host de ataque:
-####🔄 Reverse Shell
+#### 🔄 Reverse Shell
 A continuación, tratamos de explotar una RCE y ganar acceso a la maquina usando el siguiente payload:Y obtenemos la reverse shell en la máquina windows:![](../../../../~gitbook/image.md)Enumeramos la máquina y obtenemos la primera flag en el directorio Desktop del usuario kohsuke:![](../../../../~gitbook/image.md)
 ###### 🔝 Escalada de Privilegios
 
-####🔑 Descubrimiento de KeePass
+#### 🔑 Descubrimiento de KeePass
 Continuamos enumerando y descubrimos un archivo de keepass en el directorio Documents del usuario kohsuke:![](../../../../~gitbook/image.md)Podemos transferir este archivo a nuestro host de ataque usando por ejemplo smbserver de impacket para montar un recurso en red de la siguiente forma:![](../../../../~gitbook/image.md)
-####🔓 Análisis del Archivo KeePass
+#### 🔓 Análisis del Archivo KeePass
 Una vez transferido el archivo a nuestro host de ataque, verificamos con el comando file el tipo de archivo:Vemos que se trta de un archivo de keepass de versión 2.xIntentamos usar kepass2john para extraer el hash del archivo y ver si podemos crackearlo offline mediante un ataque de diccionario![](../../../../~gitbook/image.md)Copiamos el hash con el formato correcto y sin saltos de línea:A continuación, usamos hashcat y el diccionario rockyou para crackearlo y obtener la contraseña:![](../../../../~gitbook/image.md)
-####🗝️ Acceso a KeePass
+#### 🗝️ Acceso a KeePass
 Ahora usamos la herramienta keepass2 para cargar el archivo CEH.kdbx y usar la contraseña maestra que hemos obtenido anteriormente con hashcat:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Recopilamos todas las contraseñas y el hash que hemos encontrado para ver si alguna se está reutilizando por el usuario Administrator:
-####📋 Credenciales Encontradas
+#### 📋 Credenciales Encontradas
 Contraseñas recopiladas:Hash NTLM encontrado:No hay suerte tratando de autenticarnos con ellas y el usuario administrator contra el servicio SMB:![](../../../../~gitbook/image.md)
-####🎯 Pass-the-Hash Attack
+#### 🎯 Pass-the-Hash Attack
 Sin embargo, usamos impacket-psexec para hacer pass the hash usando la cuenta del usuario Administrator y el hash encontrado y logramos ganar acceso como administrador:![](../../../../~gitbook/image.md)
-###🏆 Flag Root - Flujos de Datos Alternativos (ADS)
+### 🏆 Flag Root - Flujos de Datos Alternativos (ADS)
 
-####🔍 Búsqueda Inicial
+#### 🔍 Búsqueda Inicial
 Al acceder al directorio Desktop del Administrator, encontramos una pista en lugar de la flag:
 Accedemos al directorio Desktop del usuario Administrator para obtener la flag, sin embargo, encontramos un fichero de texto que nos indica que tenemos que buscar de forma más profunda:![](../../../../~gitbook/image.md)Tras buscar el archivo root.txt en toda la raíz de windows usandoNo encontramos nada. Cambiamos el enfoque, hay una característica del sistema de archivos NTFS que son los flujos de datos alternativos (ADS)
-####📁 Detección de ADS
+#### 📁 Detección de ADS
 Usamos `dir /R` para mostrar los flujos de datos alternativos:
 Con el comando `dir /R` en Windows muestra información detallada sobre los archivos de un directorio, incluyendo sus flujos de datos alternativos (ADS):![](../../../../~gitbook/image.md)Podemos usar el comando more para leer el contenido de la siguiente forma:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)

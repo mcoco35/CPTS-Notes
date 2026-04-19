@@ -1,8 +1,8 @@
 # CPTS
 
-##Overview
+## Overview
 The Certified Penetration Testing Specialist (CPTS) is an advanced-level certification offered by Hack The Box (HTB) Academy. This certification validates practical penetration testing skills through challenging, real-world scenarios that simulate enterprise environments.
-##Certification Details
+## Certification Details
 - Issuing Organization: Hack The Box Academy
 - Difficulty Level: Advanced
 - Exam Format: Five days practical assessment + Five days for report writing
@@ -10,7 +10,7 @@ The Certified Penetration Testing Specialist (CPTS) is an advanced-level certifi
 - Prerequisites: Strong understanding of networking, web applications, Active Directory, and penetration testing methodologies
 - Validity: Lifetime certification
 
-##Skills Validated
+## Skills Validated
 The CPTS certification validates the following key skills:- Advanced Network Penetration TestingNetwork pivoting and lateral movement techniques
 - Post-exploitation strategies in enterprise environments
 - Evasion techniques and persistence mechanisms
@@ -25,50 +25,40 @@ The CPTS certification validates the following key skills:- Advanced Network Pen
 - Documenting findings and attack paths
 - Providing actionable remediation advice
 
-##Preparation Resources
+## Preparation Resources
 
-###Official Resources
+### Official Resources
 - [HTB Academy CPTS Path](https://academy.hackthebox.com/preview/certifications/htb-certified-penetration-testing-specialist/)
 - HTB Pro Labs (Offshore, Dante, APTLabs, etc.)
 - HTB Enterprise Labs
 
-###Additional Recommended Resources
+### Additional Recommended Resources
 - Active Directory attack labs on HackTheBox
 - Web application challenges focused on enterprise scenarios
 - Advanced pivoting and post-exploitation practice
 
-##Exam Tips
+## Exam Tips
 - Time Management: Create a structured approach to tackle the network efficiently
 - Documentation: Take detailed notes throughout the assessment (commands, findings, etc.)
 - Methodology: Follow a systematic methodology rather than randomly attacking machines
 - Report Writing: Allocate sufficient time for creating a comprehensive report
 - Lab Environment: Practice with HTB Pro Labs to simulate similar enterprise environments
 
-##Career Benefits
+## Career Benefits
 The CPTS certification offers several career advantages:- Validates advanced technical skills beyond entry-level certifications
 - Demonstrates ability to perform complex penetration tests in enterprise environments
 - Shows proficiency in current attack methodologies and techniques
 - Increases credibility when applying for senior penetration testing positions
 - Serves as excellent preparation for other advanced certifications like OSCP
 
-##My Certification Journey
+## My Certification Journey
 This section will be updated after completing the certification.
-###Study Plan
+### Study Plan
 - Complete relevant HTB Academy modules
 - Practice with recommended Pro Labs and Ippsec list
 - Focus on improving Active Directory attack skills
 - Enhance web application testing methodology
 - Develop efficient documentation process
 
-###Exam Experience
+### Exam Experience
 Pending certificationLast updated 11 months ago- [Overview](#overview)
-- [Certification Details](#certification-details)
-- [Skills Validated](#skills-validated)
-- [Preparation Resources](#preparation-resources)
-- [Official Resources](#official-resources)
-- [Additional Recommended Resources](#additional-recommended-resources)
-- [Exam Tips](#exam-tips)
-- [Career Benefits](#career-benefits)
-- [My Certification Journey](#my-certification-journey)
-- [Study Plan](#study-plan)
-- [Exam Experience](#exam-experience)

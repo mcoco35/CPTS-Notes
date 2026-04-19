@@ -1,6 +1,6 @@
 # Ligolo-ng
 
-####Steps
+#### Steps
 1. Agent Acquisition- Download the correct Ligolo-ng agent binary for the compromised host's OS from the official GitHub releases.
 - Transfer the agent binary to the compromised host.
 2. Proxy Initialization (Attacker Machine)Create TUN Interface:
@@ -27,14 +27,14 @@ Routing Configuration:(Replace `<Target_Network_CIDR>` with the target network's
 5. Verification and Usage (Attacker Machine)- Use tools like Nmap, Metasploit, or any other network tool to interact with the target network as if you were directly connected.
 6. Advanced (Double Pivoting)Second TUN:Listener Forwarding:Second Agent:- Execute the agent on the next compromised host, connecting to the first compromised host's forwarded port.
 Second Route:
-####🔐 Key Considerations
+#### 🔐 Key Considerations
 - Certificates: Use trusted certificates for real-world scenarios to avoid detection.
 - Listeners: Ensure proper listeners are set for reverse shells and file transfers.
 - Routing: Verify correct routing configurations to avoid connectivity issues.
 - Environment Variables: Using `$USER` makes the TUN interface creation more portable.
 - CIDR Notation: Recommends using CIDR notation for network routes, which is standard practice.
 - Safety: Clearly explains when to use the `-ignore-cert` flag.
-Last updated 10 months ago
+
 ```
 sudo ip route add  dev ligolo
 ```

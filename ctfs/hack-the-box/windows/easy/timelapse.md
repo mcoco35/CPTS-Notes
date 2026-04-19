@@ -4,46 +4,46 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Timelapse es una máquina Windows de dificultad Easy que presenta un escenario típico de Active Directory. La escalada de privilegios se basa en la explotación de archivos de respaldo que contienen certificados, el abuso de credenciales almacenadas en el historial de PowerShell, y finalmente la explotación de LAPS (Local Administrator Password Solution) para obtener acceso administrativo completo al Domain Controller.Puntos clave de aprendizaje:- 🔍 Enumeración de recursos compartidos SMB sin credenciales
 - 🔐 Crackeo de archivos ZIP y certificados PFX protegidos por contraseña
 - 🎫 Autenticación con certificados en WinRM over HTTPS
 - 📜 Análisis del historial de PowerShell para obtención de credenciales
 - 🔑 Explotación de LAPS para escalada de privilegios
 
-###🎯 Resumen
+### 🎯 Resumen
 AspectoDetalleVector de entradaRecursos compartidos SMB con acceso anónimoEscalada inicialCertificado PFX crackeado para autenticación WinRMMovimiento lateralCredenciales en historial PowerShellEscalada finalAbuso de permisos LAPSImpactoCompromiso total del Domain Controller
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🔍 Escaneo de puertos
+#### 🔍 Escaneo de puertos
 
-####🔬 Enumeración de servicios
+#### 🔬 Enumeración de servicios
 
-####🎯 Análisis de servicios identificados
+#### 🎯 Análisis de servicios identificados
 PuertoServicioDescripción53DNSServidor DNS del dominio88KerberosAutenticación del dominio389/636LDAP/LDAPSActive Directory445SMBRecursos compartidos5986WinRM HTTPSAdministración remota segura⚠️ Importante: Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🚪 Acceso Inicial
+### 🚪 Acceso Inicial
 
-####📁 Enumeración SMB
+#### 📁 Enumeración SMB
 Dado que no disponemos de credenciales, tratamos de enumerar este servicio mediante una sesión nula:
-####🔍 Exploración del recurso "Shares"
+#### 🔍 Exploración del recurso "Shares"
 
-####📥 Descarga de archivos interesantes
+#### 📥 Descarga de archivos interesantes
 Encontramos un par de directorios que contienen recursos interesantes que descargaremos:
-###🔓 Crackeo de Archivos Protegidos
+### 🔓 Crackeo de Archivos Protegidos
 
-####🤐 Análisis del archivo ZIP protegido
+#### 🤐 Análisis del archivo ZIP protegido
 El archivo `winrm_backup.zip` requiere contraseña:
-####⚡ Crackeo con John the Ripper
+#### ⚡ Crackeo con John the Ripper
 Utilizamos `zip2john` para extraer el hash y crackearlo:🎉 Credencial obtenida: `supremelegacy`
-####🎫 Crackeo del certificado PFX
+#### 🎫 Crackeo del certificado PFX
 Al descomprimir el ZIP obtenemos un certificado PFX que también requiere contraseña:![](../../../../~gitbook/image.md) Usamos la herramienta pfx2john para obtener su hash y crackearlo:🎉 Credencial obtenida: `thuglegacy`
-###🔑 Extracción de Certificados
+### 🔑 Extracción de Certificados
 
-####📋 Información del certificado
+#### 📋 Información del certificado
 
-####🔐 Extracción de la clave privada
+#### 🔐 Extracción de la clave privada
 - openssl Llama a la herramienta de línea de comandos OpenSSL.
 - pkcs12 Usa el módulo para manejar archivos .pfx o .p12 (formato PKCS#12).
 - in legacyy_dev_auth.pfx Indica el archivo de entrada (.pfx) del cual se extraerán los datos.
@@ -51,42 +51,42 @@ Al descomprimir el ZIP obtenemos un certificado PFX que también requiere contra
 - out key.pem Archivo de salida donde se guardará la clave privada extraída.
 - nodes Significa "no DES encryption", o sea, no cifrar la clave privada en el archivo de salida. Se guardará en texto plano.
 
-####📜 Extracción del certificado público
+#### 📜 Extracción del certificado público
 - `openssl` → Llama a la herramienta OpenSSL.
 - `pkcs12` → Invoca el módulo de OpenSSL para trabajar con archivos PKCS#12 (`.pfx`, `.p12`), que son contenedores de certificados y claves privadas.
 - `-in legacyy_dev_auth.pfx` → Indica el archivo `.pfx` del cual quieres obtener información.
 - `-info` → Muestra información adicional y detallada del archivo PKCS#12.
 
-###🎯 Acceso inicial via WinRM
+### 🎯 Acceso inicial via WinRM
 
-####🔒 Conexión con certificados
+#### 🔒 Conexión con certificados
 Utilizamos evil-winrm con los certificados extraídos para conectarnos al puerto 5986 (WinRM HTTPS):
-####🏆 Primera flag obtenida
+#### 🏆 Primera flag obtenida
 
-###🔄 Movimiento Lateral
+### 🔄 Movimiento Lateral
 
-####🔍 Enumeración con WinPEAS
+#### 🔍 Enumeración con WinPEAS
 Transferimos y ejecutamos winPEAS.ps1 para enumerar vectores de escalada:
-####📜 Descubrimiento en historial PowerShell
+#### 📜 Descubrimiento en historial PowerShell
 En los resultados aparece una contraseña en el histórico de PowerShell:![](../../../../~gitbook/image.md)🎉 Credenciales obtenidas: `svc_deploy:E3R$Q62^12p7PLlC%KWaxuaV`
-####🔐 Acceso como svc_deploy
+#### 🔐 Acceso como svc_deploy
 
-###⬆️ Escalada de Privilegios
+### ⬆️ Escalada de Privilegios
 
-####👥 Análisis de pertenencia a grupos
+#### 👥 Análisis de pertenencia a grupos
 El usuario `svc_deploy` pertenece al grupo especial "LAPS Readers":![](../../../../~gitbook/image.md)
-####🩸 Enumeración con BloodHound
+#### 🩸 Enumeración con BloodHound
 Exportamos el dominio usando bloodhound-python:![](../../../../~gitbook/image.md)
-####🔍 Explotación de LAPS
+#### 🔍 Explotación de LAPS
 LAPS (Local Administrator Password Solution) almacena contraseñas de administradores locales en Active Directory. Como miembro del grupo "LAPS Readers", podemos leer estas contraseñas.
-####🖥️ Obtención de contraseña del administrador
+#### 🖥️ Obtención de contraseña del administrador
 ![](../../../../~gitbook/image.md)Este comando recupera todos los objetos de equipo del AD junto con todas sus propiedades, incluyendo las contraseñas LAPS.🎉 Credenciales de Administrator obtenidas: `Administrator:7F;mQ+XY}vJ2Eu06;Ztq94V&`
-###👑 Acceso Administrativo Completo
+### 👑 Acceso Administrativo Completo
 
-####🔐 Conexión como Administrator
+#### 🔐 Conexión como Administrator
 
-####🏆 Flag de root obtenida
-Last updated 9 months ago- [📝 Descripción](#descripcion)
+#### 🏆 Flag de root obtenida
+
 - [🎯 Resumen](#resumen)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🚪 Acceso Inicial](#acceso-inicial)

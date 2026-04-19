@@ -3,52 +3,52 @@
 ![](../../../../~gitbook/image.md)Publicado: 08 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Underpass es una máquina Linux de dificultad Easy de HackTheBox que presenta un escenario realista de administración de servicios RADIUS. La explotación se centra en el descubrimiento de información sensible a través de SNMP, seguido de la enumeración de un panel web de DaloRADIUS mal configurado que expone credenciales de usuarios.
-####🎯 Objetivos de Aprendizaje
+#### 🎯 Objetivos de Aprendizaje
 - Enumeración SNMP: Técnicas de reconocimiento usando protocolos de gestión de red
 - Explotación Web: Análisis de aplicaciones RADIUS y paneles administrativos
 - Cracking de Hashes: Recuperación de credenciales mediante ataques de diccionario
 - Escalada de Privilegios: Abuso de binarios con permisos sudo para ganar acceso root
 
-####🔧 Tecnologías Involucradas
+#### 🔧 Tecnologías Involucradas
 - SNMP v1/v2c: Protocolo de gestión de red para descobrimiento de información
 - DaloRADIUS 2.2 beta: Panel web de administración RADIUS
 - Apache 2.4.52: Servidor web con aplicaciones PHP
 - Mosh (Mobile Shell): Herramienta de shell remoto con vulnerabilidad de escalada
 
-####📊 Categorías de Vulnerabilidades
+#### 📊 Categorías de Vulnerabilidades
 - Information Disclosure via SNMP
 - Weak Authentication en paneles administrativos
 - Password Hash Exposure en bases de datos
 - Sudo Misconfiguration para escalada de privilegios
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos TCP
+#### Escaneo de puertos TCP
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-####Escaneo de puertos UDP
+#### Escaneo de puertos UDP
 
-####🐍 Análisis del puerto 161 UDP SNMP
+#### 🐍 Análisis del puerto 161 UDP SNMP
 Usamos la herramienta snmpbrute para intentar descubrir recursos en red con nombres comunidades públicas que puedan estar expuestas en este servicio![](../../../../~gitbook/image.md)Usamos la herramienta snmp-check para extraer strings de las comunidades enumeradas anteriormente para ver si descubrimos algún recurso interensante:![](../../../../~gitbook/image.md)No descubrimos nada más alla del nombre de vhost que añadiremos a nuestro fichero /etc/hosts, la versión del kernel de linux del host y un usuario llamado steve⚠️ Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🏠 Puerto 80 HTTP (underpass.htb)
+#### 🏠 Puerto 80 HTTP (underpass.htb)
 No encontramos gran cosa al enumerar el sitio de forma manual salvo la típica web de apache en construcción.![](../../../../~gitbook/image.md)
-####📂 Fuzzing de directorios
+#### 📂 Fuzzing de directorios
 Tras probar a realizar fuzzing de directorios con ferxobuster y la lista `/usr/share/seclists/Discovery/Web-Content/common.txt` encontramos algunos recursos interesantes:![](../../../../~gitbook/image.md)📝 ChangeLog de DaloRADIUShttp://10.10.11.48/daloradius/ChangeLog![](../../../../~gitbook/image.md)🙈 Archivo .gitignorehttp://10.10.11.48/daloradius/.gitignoreUsando la herramienta dirsearch para realizar fuzzing sobre 10.10.11.48/daloradius añadimos algunos nuevos resultados a nuestro scope:![](../../../../~gitbook/image.md)🐳 Descubrimiento del Docker Composehttp://10.10.11.48/daloradius/docker-compose.ymlhttp://10.10.11.48/daloradius/app/users/login.php![](../../../../~gitbook/image.md)Buscamos credenciales por defecto para este servicio y encontramos algunas como:Pero ninguna parece funcionar.El directorio /app parece ser bastante relevante por lo que realizamos nuevamente fuzzing sobre el mismo usando en esta ocasión la lista `usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt `y encontramos algunos recursos adicionales para añadir a nuestro scope:![](../../../../~gitbook/image.md)
-####🔓 Explotación - Panel DaloRADIUS
+#### 🔓 Explotación - Panel DaloRADIUS
 http://10.10.11.48/daloradius/app/operators/login.php
 Aquí encontramos otro panel que parece estar destinado a los administradores. Además vemos una versión del servicio (2.2 beta)![](../../../../~gitbook/image.md)Probamos de nuevo con las credenciales por defecto:Logramos entrar con la cuenta `administrator:radius`![](../../../../~gitbook/image.md)💎 Extracción de credencialesEnumeramos información dentro del servicio para ver si encontramos algo interesante. A los pocos minutos encontramos una opción que nos permite listar información de los usuarios y encontramos un hash de un usuario llamado svcMosh:![](../../../../~gitbook/image.md)🔨 Cracking del hash MD5Vemos que se trata de un hash en MD5 y lo crackeamos usando hashcat y el diccionario rockyou:![](../../../../~gitbook/image.md)
-####🔑 Acceso inicial
+#### 🔑 Acceso inicial
 Y obtenemos la contraseña: underwaterfriends. Ahora que tenemos una credencial, podemos intentar usarla con el servicio SSH para ver si es válida. Una pequeña prueba con netexec nos revela que la credencial es válida con este servicio:![](../../../../~gitbook/image.md)Obtenemos la primera flag en el directorio del usuario svcMosh:
 ###### 🚀 Escalada de privilegios
 🔍 Enumeración de permisos sudoComprobamos que el usuario svcmosh puede ejecutar el siguiente como root:
-####⚡ Explotación del binario mosh-server
+#### ⚡ Explotación del binario mosh-server
 Mosh (Mobile Shell) es una herramienta utilizada para conexiones remotas que mantiene sesiones activas incluso cuando hay interrupciones en la red. El binario `mosh-server` inicia un servidor de Mosh y puede aceptar parámetros que podrían ser explotados.En este caso, usaremos la posibilidad de ejecutarlo como `sudo` para ganar acceso privilegiado.Abusar de `mosh-server` para escalada de privilegios- `sudo`: Ejecuta el comando con privilegios de superusuario.
 - `/usr/bin/mosh-server`: El binario que tiene permisos `NOPASSWD` según el resultado de `sudo -l`. Esto permite ejecutarlo sin contraseña.
 - `new`: Le dice a `mosh-server` que inicie una nueva sesión.

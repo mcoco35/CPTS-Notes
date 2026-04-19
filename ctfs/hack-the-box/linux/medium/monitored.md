@@ -3,37 +3,37 @@
 ![](../../../../~gitbook/image.md)Publicado: 08 de Mayo de 2025
 Autor: José Miguel Romero aka x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Monitored es una máquina Linux de dificultad fácil que implica la explotación de un sistema de monitorización Nagios XI. El recorrido comienza con la enumeración de servicios, donde encontramos un servidor web Apache, LDAP, SSH y SNMP.A través del servicio SNMP descubrimos credenciales de un usuario deshabilitado que nos permiten obtener un token de API para Nagios XI. Con este acceso limitado, explotamos una vulnerabilidad de inyección SQL (CVE-2023-40931) en el componente de mensajes banner para extraer información de la base de datos.Utilizando las API keys obtenidas, creamos un usuario administrador en Nagios XI que nos permite ejecutar comandos remotos y conseguir acceso al sistema como usuario nagios. Finalmente, abusamos de un script que podemos ejecutar como sudo y que maneja enlaces simbólicos de forma insegura para obtener la clave SSH privada del usuario root y completar la máquina.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios TCP
+#### Enumeración de servicios TCP
 
-####Enumeración de servicios UDP
+#### Enumeración de servicios UDP
 NOTA: Especificamos la flag -F para escanear los puertos más comunes.
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####Puerto 80 HTTP (Apache 2.4.56)
+#### Puerto 80 HTTP (Apache 2.4.56)
 Gracias a la enumeración de servicios con nmap descubrimos que se está aplicando una redirección al vhost nagios.monitored.htb⚠️ Debemos agregar este dominio a nuestro archivo hosts.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Nagios es otro sistema y producto de monitoreo de red. Nagios ha tenido una amplia variedad de problemas a lo largo de los años, incluida la ejecución remota de código, la escalada de privilegios de raíz, la inyección SQL, la inyección de código y el XSS almacenado. Si se encuentra con una instancia de Nagios, vale la pena buscar las credenciales predeterminadas `nagiosadmin:PASSW0RD` y tomar las huellas digitales de la versión.EN esta ocasión no tenemos éxito con las credenciales por defecto.🕷️ Fuzzing de vhostsRelizamos fuzzing de vhosts por si pudiésemoa añadir algo más a nuestro scope pero únicamente encontramos el de nagios![](../../../../~gitbook/image.md)🕷️ Fuzzing de directorios![](../../../../~gitbook/image.md)
 Como único hallazgo relevante encontramos el recurso /nagiosxiNOTA: indicamos la flag -k para omitir los certificados TLS inválidos
-####389 OpenLDAP
+#### 389 OpenLDAP
 Usamos el siguiente script para la enumeración LDAP:- [https://github.com/bloodstiller/ldapire](https://github.com/bloodstiller/ldapire)
 Anonymous bind está deshabilitado.![](../../../../~gitbook/image.md)También podemos verificarlo con ldapsearch:
-####161 SNMP UDP
+#### 161 SNMP UDP
 Lanzamos la herramienta [snmp-check](https://github.com/superzero10/snmp-check) para enumerar información de este servicio:Hay mucha información pero en la parte relativa a "procesos" descubrimos algo interesante:![](../../../../~gitbook/image.md)Parece que se está llamando un script con el usuario svc y una contraseña:`svc:XjH7VCehowpR1xZB`Probamos esta contraseña con diversos servicios como SSH, a intentar enumerar LDAP con credenciales y con el panel de login de Nagios, pero no tenemos éxito, aunque sí notamos que algo cambia en el panel de login de Nagios en el mensaje que recibimos:![](../../../../~gitbook/image.md)Ya no nos indica `Invalid username or password.`ahora tenemos otro error distinto lo cual nos hace sospechar que el usuarios svc exista con esas credenciales pero ha sido deshabilitado porque además el error es distinto si la contraseña no es correcta.Tenemos credenciales, pero no podemos acceder a la interfaz web debido a que la cuenta está deshabilitada.
 Investigando en Nagios , encontramos este post https://support.nagios.com/forum/viewtopic.php?p=310411#p310411 en los foros de Nagios que nos proporciona el siguiente comando,
 utilizando la API del servicio:Si lo usamos usando las credenciales descubiertas obtenemos un token que es válido durante 5 minutos:![](../../../../~gitbook/image.md)Seguimos las instrucciones del post para ver cómo puede usarse este token:![](../../../../~gitbook/image.md)Funciona así que si aplicamos esta misma lógica al recurso /nagiosxi/index.php?token=XXX deberíamos tener acceso al index de la página:Logramos acceder con éxito y enumerar la versión: 5.11.0![](../../../../~gitbook/image.md)Parece que esa versión es vulnerable a SQL injection:[CVE-2023-40931](https://nvd.nist.gov/vuln/detail/CVE-2023-40931)
 https://pentest-tools.com/vulnerabilities-exploits/nagios-xi-v5110-sql-injection_23763
-###💉 Explotación
+### 💉 Explotación
 Debido a un mensaje o banner hecho en ajax. Hay un post donde se menciona esta vulnerabilidad:
 https://outpost24.com/blog/nagios-xi-vulnerabilities/Activamos el interceptor de Burpsuite y refrescamos la página y cambiamos la petición a POST:![](../../../../~gitbook/image.md)Nota: Asegurarse de cambiar el valor Cookie por la cookie de autenticación de su sesión.![](../../../../~gitbook/image.md)Enviando la petición, vemos un error SQL en la pestaña Respuesta, confirmando que podemos inyectar consultas SQL en el servicio.Existe un payload de sqlmap que permite automatizar esta inyección:https://github.com/sealldeveloper/CVE-2023-40931-PoCEncontramos información de dos usuarios con los hashes en formato bcrypt:Intentamos crackear estos hashes con hashcat y rockyou sin éxito:Hay otro campo más que puede ser interesante de la información que hemos obtenido con el dump de la tabla xi_users, el API KEYPodemos usar el api key para intentar crear un nuevo usuario administrador como se indica en este exploit https://www.exploit-db.com/exploits/44969Usamos el siguiente payload:![](../../../../~gitbook/image.md)Logramos acceder con nuestra nueva cuenta:![](../../../../~gitbook/image.md)Nos pide cambiar la contraseña la primera vez que ingresamos. Una vez hecho, a continuación nos vamos a Configure > Core Config Manager > Commands![](../../../../~gitbook/image.md)A continuación introducimos el siguiente payload para obtener una reverse shell:![](../../../../~gitbook/image.md)Aplicamos la configuración.Iniciamos un listener en el puerto que hayamos configurado:Por último, vamos a Monitorización > Hosts y pulsamos sobre localhost . Seleccionamos ashell como comando de comprobación y pulsamos en Ejecutar comando de comprobación :!![](../../../../~gitbook/image.md)Hacemos click en Run Check Command y deberemos recibir nuestra reverse shell:![](../../../../~gitbook/image.md)Obtenemos la primera flag:
-###🔐 Escalada de Privilegios
+### 🔐 Escalada de Privilegios
 Al hacer un sudo -l observamos que nagios puede ejecutar una gran variedad de scripts como sudo:![](../../../../~gitbook/image.md)Uno de los que más nos puede interesar es el de getprofile.shLeyendo el código fuente de getprofile.sh , vemos que parte de su funcionalidad está destinada a recoger y consolidar varios registros y archivos de configuración en un directorio de perfil especificado por el usuario. Este script toma un argumento de la línea de comandos, que se supone que es el nombre o identificador del directorio para almacenar el perfilEl script comprueba si phpmailer.log existe en el directorio /usr/local/nagiosxi/tmp/ y si es así, utiliza el comando tail para copiar las últimas 100 líneas de este archivo de registro en una carpeta designada dentro de /usr/local/nagiosxi/var/components/profile/ .Dado que podemos ejecutar el script con privilegios elevados, esta funcionalidad es vulnerable.La vulnerabilidad proviene del hecho de que el script no valida lo que es $carpeta ni asegura o la ruta utilizada en las operaciones de copia. Este descuido permite varios tipos de ataques al sistema de archivos. sistema de archivos, entre los que destacan:Ataques de enlaces simbólicos: Un usuario puede crear un enlace simbólico ( symlink ) llamado phpmailer.log que apunta a un archivo sensible (por ejemplo, /root/.ssh/id_rsa ). Cuando el script se ejecute, seguirá el enlace simbólico y copiaría por error datos confidenciales en un directorio accesible.Esto requiere que tengamos acceso a /usr/local/nagiosxi/tmp/phpmailer.log ,así que lo verificamos![](../../../../~gitbook/image.md)Aunque el archivo de registro no existe, tenemos permisos de escritura en su directorio padre. A continuación, comprobamos la configuración SSH para ver si la autenticación como root está habilitada, y si PubkeyAuthentication está habilitado.![](../../../../~gitbook/image.md)Esta configuración significa que si el usuario root tiene una clave privada en su directorio .ssh, podremos usarla para autenticar.Para llevar a cabo la explotación seguimos los siguientes pasos:Crear un Symlink: Creamos un enlace simbólico llamado phpmailer.log en el directorio /usr/local/nagiosxi/tmp/ que apunte a un archivo sensible, como la clave privada SSH del usuario root:Ejecutamos el script que podemos ejecutar como sudoAcceder a los datos copiados: El script seguiría el enlace simbólico y copiaría el contenido de la clave privada SSH de root de root en la carpeta del perfil bajo nuestro control,![](../../../../~gitbook/image.md)Copiamos la clave privada a nuestro host de ataque y le damos permiso 600 y nos conectamos vía ssh como root y obtenemos la flag:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)
 - [🔭 Reconocimiento](#reconocimiento)
@@ -207,8 +207,8 @@ nagios@monitored:~$
 ```
 
 ```
-#!/ bin / bash
-#GRAB THE ID folder = $1
+# !/ bin / bash
+# GRAB THE ID folder = $1
 if
 ["$folder" == ""];
 then echo "You must enter a folder name/id to generate a profile." echo

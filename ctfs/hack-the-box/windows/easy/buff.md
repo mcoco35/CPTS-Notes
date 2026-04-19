@@ -3,31 +3,31 @@
 ![](../../../../~gitbook/image.md)Publicado: 16 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Buff es una máquina Windows de dificultad fácil que presenta vulnerabilidades en una aplicación web de gestión de gimnasio. La explotación inicial se basa en un exploit público para el Gym Management System v1.0, que permite la ejecución remota de código sin autenticación mediante una vulnerabilidad de subida de archivos maliciosos.Para la escalada de privilegios, se aprovecha una vulnerabilidad de Buffer Overflow en el servicio CloudMe v1.11.2, que se ejecuta localmente en el puerto 8888. La explotación requiere el uso de port forwarding para acceder al servicio y posteriormente ejecutar un shellcode personalizado para obtener privilegios de administrador.
-####🎯 Objetivos de Aprendizaje
+#### 🎯 Objetivos de Aprendizaje
 - Explotación de vulnerabilidades en aplicaciones web
 - Técnicas de evasión de filtros de subida de archivos
 - Buffer Overflow en aplicaciones Windows
 - Port forwarding con Chisel
 - Uso de SMB para captura de hashes NTLMv2
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🔍 Ping para verificación en base a TTL
+#### 🔍 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔬 Enumeración de servicios
+#### 🔬 Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🏋️ Puerto 8080 - Apache/2.4.43
+#### 🏋️ Puerto 8080 - Apache/2.4.43
 URL: [http://10.10.10.198:8080/](http://10.10.10.198:8080/)![](../../../../~gitbook/image.md)🎯 Información Relevante EncontradaEn la sección de contacto se revela:- Software: Gym Management System
 - Versión: v1.0
 - Esta información es crucial para buscar vulnerabilidades conocidas
 ![](../../../../~gitbook/image.md)Fuzzing de directorios
-####📁 Análisis de Recursos Encontrados
+#### 📁 Análisis de Recursos Encontrados
 Revisamos y analizamos cada uno de los recursos encontrados:🔧 /edit.php - http://10.10.10.198:8080/edit.php- Revela Internal Path Disclosure
 - Muestra rutas internas del sistema
 ![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)**📤 /upload.php ** - http://10.10.10.198:8080/register.php- Página de subida de archivos
@@ -40,9 +40,9 @@ Revisamos y analizamos cada uno de los recursos encontrados:🔧 /edit.php - htt
 - Confirma el uso de Gym Management System
 ![](../../../../~gitbook/image.md)🖥️ /cgi-bin/printenv.pl Script en Perl que muestra variables de entorno del servidor:
 http://10.10.10.198:8080/cgi-bin/printenv.plParece que se trata script en perl ubicado en el directorio `cgi-bin`, que típicamente se usa para ejecutar scripts CGI (Common Gateway Interface) cuyo propósito es imprimir todas las variables de entorno del servidor web en la salida HTTP.
-###💥 Explotación Inicial
+### 💥 Explotación Inicial
 
-####🔎 Búsqueda de Vulnerabilidades - Gym Management System
+#### 🔎 Búsqueda de Vulnerabilidades - Gym Management System
 Habíamos enumerado un servicio llamado Gym Management y vemos que la versión que se está utilizando ha presentado vulnerabilidades en el pasado y además hay exploits públicos:![](../../../../~gitbook/image.md)Uno de los exploits permite una ejecución remota de comandos sin autenticación debido a un mal manejo en la subida de archivos.Resultados encontrados:- CVE-2020-15928: Gym Management System 1.0 - Unauthenticated Remote Code Execution
 - Exploit ID: 48506
 - Tipo: Remote Code Execution sin autenticación
@@ -58,23 +58,23 @@ Habíamos enumerado un servicio llamado Gym Management y vemos que la versión q
 - Acceso vía URL con parámetros GET para comandos
 Descargamos y ejecutamos el exploit y vemos que nos pide definir como parámetro únicamente la URL del objetivo:![](../../../../~gitbook/image.md)Resultado: ✅ Webshell obtenida exitosamente![](../../../../~gitbook/image.md)🎯 Captura de Hash NTLMv2Configuración del servidor SMB:
 Una posible vía de explotación aquí sería levantarnos en nuestro host de ataque un servidor SMB usando impacket y a continuación desde el host en el que acabamos de subir la webshell hacer una petición a un recurso obligando así al usuario de la máquina a autenticarse y obtener su hash NTLMv2, que aunque no nos permite autenticarnos haciendo pass the hash sí que podemos intentar crackearlo para obtener su contraseña:![](../../../../~gitbook/image.md)A continuación usamos hashcat y el diccionario rockyou para crackearlo y obtener la contraseña del usuario shaun pero en este caso vemos que no nos da la contraseña:![](../../../../~gitbook/image.md)❌ El hash no pudo ser crackeadoEste método no nos sirve cómo vía potencial de explotación, sin embargo, no está todo perdido. Alternativamente podemos usar el recurso SMB que hemos compartido en el cual tenemos la herramienta netcat para usarla y establecer conexión con mi host de ataque:
-####🐚 Reverse Shell alternativa
+#### 🐚 Reverse Shell alternativa
 Primero inicio el listener con netcat en mi host de ataque:A continuación hago una petición al recurso compartido smbShare de mi host de ataque usando netcat para conectarme al listener de mi host de ataque:A los pocos segundos recibo la conexión reversa confirmando así la explotación y el acceso al sistema pudiendo obtener la primera flag en el directorio Desktop del usuario shaun:Resultado: ✅ Shell reversa como usuario `buff\shaun`
-###🔝 Escalada de Privilegios
+### 🔝 Escalada de Privilegios
 
-####🔍 Enumeración del Sistema
+#### 🔍 Enumeración del Sistema
 📁 Archivos Interesantes EncontradosEnumerando los directorios del usuario shaun encontramos lo siguiente:📄 C:\Users\shaun\Documents\Tasks.bat📦 C:\Users\shaun\Downloads\CloudMe_1112.exe
-####🔎 Búsqueda de Vulnerabilidades - CloudMe
+#### 🔎 Búsqueda de Vulnerabilidades - CloudMe
 Buscamos información pública de este servicio así como posibles exploits y encontramos bastantes exploits relacionados con una explotación de Buffer Overflow:![](../../../../~gitbook/image.md)🌐 Verificación del ServicioLo primero que necesitamos saber es si CloudMe está ejecutándose en la máquina. El puerto por defecto es el 8888. Usamos `netstat -nat`para confirmarlo![](../../../../~gitbook/image.md)
-####🔄 Port Forwarding con Chisel
+#### 🔄 Port Forwarding con Chisel
 Dado que este puerto no está expuesto, necesitamos hacer port forwading para poder acceder a él desde nuestro host de ataque. Para ello podemos usar chisel:Primero descargamos chisel server en su versión para linux, ya que esta la ejecutaremos en nuestro host de ataque a modo de server:Ahora nos descargamos la versión para windowsLa transferimos al host windows. Parece que aquí certutil da problemas así que usamos curlEjecutamos chisel como cliente usando el puerto 9003 que habíamos definido en el servidor chisel para hacer el redireccionamiento del puerto 8888 del host de la máquina windows al puerto 8888 de nuestro host de ataque:
-####💣 Desarrollo del Exploit
+#### 💣 Desarrollo del Exploit
 🎯 Generación de ShellcodeAhora, debemos generar el payload usando el shellcode que tenemos en el exploit para que en lugar de cargar la calculadora como viene por defecto en la PoC ejecute una shell reversa, para ello usaremos msfvenom de la siguiente forma:🔧 Modificación del ExploitExploit base: 48389.py
 Modificaciones realizadas:- Reemplazo del payload de calculadora por reverse shell
 - Configuración de IP y puerto de ataque
 - Ajuste de padding y NOPs
 Exploit final:
-####🎯 Ejecución del Buffer Overflow
+#### 🎯 Ejecución del Buffer Overflow
 Iniciamos un listener en el puerto 443 de nuestro host de ataque usando netcatEjecutamos el exploit y ganamos acceso a la máquina como Administrador:![](../../../../~gitbook/image.md)Resultado: ✅ Shell como NT AUTHORITY\SYSTEMFinalmente obtenemos la flag:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
@@ -377,7 +377,7 @@ buf += b"\x75\x05\xbb\x47\x13\x72\x6f\x6a\x00\x53\xff\xd5"
 # Version: CloudMe 1.11.2
 # Tested on: Windows 10 x86
 
-#Instructions:
+# Instructions:
 # Start the CloudMe service and run the script.
 
 import socket
@@ -388,7 +388,7 @@ padding1   = b"\x90" * 1052
 EIP        = b"\xB5\x42\xA8\x68" # 0x68A842B5 -> PUSH ESP, RET
 NOPS       = b"\x90" * 30
 
-#msfvenom -a x86 -p windows/exec CMD=calc.exe -b '\x00\x0A\x0D' -f python
+# msfvenom -a x86 -p windows/exec CMD=calc.exe -b '\x00\x0A\x0D' -f python
 payload =  b""
 payload += b"\xfc\xe8\x82\x00\x00\x00\x60\x89\xe5\x31\xc0\x64"
 payload += b"\x8b\x50\x30\x8b\x52\x0c\x8b\x52\x14\x8b\x72\x28"

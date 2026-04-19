@@ -3,7 +3,7 @@
 ![](../../../../~gitbook/image.md)Publicado: 18 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Mailing es una máquina Windows de dificultad Easy que simula un entorno corporativo con servicios de correo electrónico. La explotación inicial involucra el descubrimiento de una vulnerabilidad de Local File Inclusion (LFI) en una aplicación web que permite acceder a archivos de configuración sensibles del servidor hMailServer. A través de este vector, obtenemos credenciales del administrador que nos permiten explotar CVE-2024-21413, una vulnerabilidad de autenticación NTLM en hMailServer para capturar hashes NTLMv2.Para la escalada de privilegios, aprovechamos CVE-2023-2255, una vulnerabilidad de control de acceso inadecuado en LibreOffice que permite la ejecución remota de código a través de documentos maliciosos con marcos flotantes incrustados.Técnicas utilizadas:- 🔍 Reconocimiento y enumeración de servicios
 - 📁 Local File Inclusion (LFI) / Path Traversal
 - 🔐 Cracking de hashes MD5 y NTLMv2
@@ -11,7 +11,7 @@ Mailing es una máquina Windows de dificultad Easy que simula un entorno corpora
 - 🎯 NTLM Relay Attack (CVE-2024-21413)
 - 📄 Explotación de LibreOffice (CVE-2023-2255)
 
-####🔗 Cadena de explotación
+#### 🔗 Cadena de explotación
 - 🔍 Reconocimiento: Identificación de servicios y aplicación web
 - 📁 LFI/Path Traversal: Extracción del archivo de configuración de hMailServer
 - 🔐 Cracking: Recuperación de credenciales del administrador
@@ -20,86 +20,86 @@ Mailing es una máquina Windows de dificultad Easy que simula un entorno corpora
 - 📄 CVE-2023-2255: Escalada mediante documento LibreOffice malicioso
 - 👑 Administrador: Shell como localadmin
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🔍 Escaneo de puertos TCP
+#### 🔍 Escaneo de puertos TCP
 
-####🛠️ Enumeración de servicios
+#### 🛠️ Enumeración de servicios
 
-####🗂️ Resumen de servicios identificados
+#### 🗂️ Resumen de servicios identificados
 PuertoServicioDescripción25,465,587SMTPhMailServer - Servicios de correo80HTTPMicrosoft IIS 10.0110,143,993POP3/IMAPServicios de correo445SMBServicios de archivos compartidos5985WinRMAdministración remota de Windows⚠️ Configuración de host virtual
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🌍 Puerto 80 - HTTP
+#### 🌍 Puerto 80 - HTTP
 Revisamos el servicio web y encontramos información sobre lo que parece ser un servicio de correo llamado hMailServer:![](../../../../~gitbook/image.md)Hay un enlace en el que hay un document pdf con unas instrucciones para su descarga, aunque no encontramos nada de utilidad en ellas inicialmente:URL de interés: http://mailing.htb/index.php/login![](../../../../~gitbook/image.md)
-####🔍 Fuzzing de directorios
+#### 🔍 Fuzzing de directorios
 Tras probar a realizar fuzzing de directorios con dirsearch encontramos un recurso interesante:
-####🎯 Análisis del endpoint download.php
+#### 🎯 Análisis del endpoint download.php
 URL: http://mailing.htb/download.php![](../../../../~gitbook/image.md)Al acceder recibimos una respuesta que indica que espera parámetros. Analizamos con Burp Suite:![](../../../../~gitbook/image.md)
-####🔎 Fuzzing de parámetros
+#### 🔎 Fuzzing de parámetros
 Utilizamos ffuf para descubrir parámetros válidos:![](../../../../~gitbook/image.md)✅ Parámetro descubierto: `file`
-####🔓 Explotación de LFI/Path Traversal
+#### 🔓 Explotación de LFI/Path Traversal
 Verificamos que podemos descargar el archivo instructions.pdf legítimo:![](../../../../~gitbook/image.md)
-####🎯 Extracción de archivos de configuración
+#### 🎯 Extracción de archivos de configuración
 Probamos el Path Traversal con archivos del sistema:
-####📧 Archivo de configuración de hMailServer
+#### 📧 Archivo de configuración de hMailServer
 Conociendo la estructura típica de hMailServer, intentamos acceder a su archivo de configuración:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🔐 Extracción de credenciales
+#### 🔐 Extracción de credenciales
 Hash MD5 encontrado:![](../../../../~gitbook/image.md)
-####💥 Cracking del hash
+#### 💥 Cracking del hash
 ![](../../../../~gitbook/image.md)✅ Credenciales obtenidas: `administrator:homenetworkingadministrator`
-###📧 Explotación del Servicio SMTP
+### 📧 Explotación del Servicio SMTP
 
-####🔌 Conexión y autenticación
+#### 🔌 Conexión y autenticación
 Probamos las credenciales contra varios servicios sin éxito inicial. Procedemos a autenticarnos en SMTP:
-####🔒 Codificación de credenciales
+#### 🔒 Codificación de credenciales
 Para la autenticación SMTP necesitamos codificar las credenciales en base64:
-####✅ Autenticación exitosa
+#### ✅ Autenticación exitosa
 
-###🎯 Explotación CVE-2024-21413
+### 🎯 Explotación CVE-2024-21413
 
-####🔍 Investigación del CVE
+#### 🔍 Investigación del CVE
 CVE-2024-21413 es una vulnerabilidad en hMailServer que permite capturar hashes NTLMv2 mediante el envío de correos maliciosos con enlaces UNC.Referencias:- https://github.com/CMNatic/CVE-2024-21413
 - https://github.com/ThemeHackers/CVE-2024-21413
 
-####👤 Identificación del objetivo
+#### 👤 Identificación del objetivo
 Según el documento instructions.pdf, el usuario Maya es responsable de revisar los correos:![](../../../../~gitbook/image.md)
-####🛠️ Preparación del exploit
+#### 🛠️ Preparación del exploit
 Paso 1: Descargamos el exploitPaso 2: Configuramos el exploit con nuestros datos:Paso 3: Iniciamos servidor SMB para capturar el hash:Paso 4: Ejecutamos el exploit:![](../../../../~gitbook/image.md)
-####🎯 Captura del hash NTLMv2
+#### 🎯 Captura del hash NTLMv2
 Paso 5: Recibimos el hash de Maya:![](../../../../~gitbook/image.md)
-####🔓 Cracking del hash NTLMv2
+#### 🔓 Cracking del hash NTLMv2
 ![](../../../../~gitbook/image.md)✅ Credenciales obtenidas: `maya:m4y4ngs4ri`
-###🚪 Acceso Inicial
+### 🚪 Acceso Inicial
 
-####🔑 Verificación de acceso WinRM
+#### 🔑 Verificación de acceso WinRM
 
-####🎉 Shell como usuario Maya
+#### 🎉 Shell como usuario Maya
 
-####🏁 Primera flag
+#### 🏁 Primera flag
 
-###🔝 Escalada de Privilegios
+### 🔝 Escalada de Privilegios
 
-####🕵️ Enumeración del sistema
+#### 🕵️ Enumeración del sistema
 Durante la enumeración encontramos un directorio interesante:
-####🤔 Comportamiento sospechoso
+#### 🤔 Comportamiento sospechoso
 Al crear archivos en "Important Documents", estos se eliminan automáticamente tras unos segundos:![](../../../../~gitbook/image.md)💡 Observación: Esto sugiere que alguien (posiblemente un usuario administrativo) está monitoreando y procesando archivos en este directorio.
-####📊 Enumeración de software instalado
+#### 📊 Enumeración de software instalado
 Ejecutamos un script PowerShell para listar el software instalado:
-####🎯 Software vulnerable identificado
+#### 🎯 Software vulnerable identificado
 LibreOffice 7.4.0.1 - Vulnerable a CVE-2023-2255![](../../../../~gitbook/image.md)
-####🔓 CVE-2023-2255 - LibreOffice RCE
+#### 🔓 CVE-2023-2255 - LibreOffice RCE
 Descripción: Vulnerabilidad de control de acceso inadecuado en LibreOffice relacionada con "floating frames" (marcos flotantes) en documentos.Exploit público: https://github.com/elweth-sec/CVE-2023-2255
-####🛠️ Preparación del payload
+#### 🛠️ Preparación del payload
 Paso 1: Creamos comando PowerShell para descarga remota:Paso 2: Codificamos en base64 (UTF-16LE):Paso 3: Preparamos reverse shell (Nishang):Añadimos al final del script:
-####🚀 Ejecución del exploit
+#### 🚀 Ejecución del exploit
 Paso 4: Iniciamos servicios:Paso 5: Generamos documento malicioso:Paso 6: Subimos el documento malicioso:
-####🎉 Shell como Administrador
+#### 🎉 Shell como Administrador
 Una vez que el usuario abre el archivo malicioso:
-####🏆 Flag de root
-Last updated 10 months ago- [📝 Descripción](#descripcion)
+#### 🏆 Flag de root
+
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)
 - [📧 Explotación del Servicio SMTP](#explotacion-del-servicio-smtp)

@@ -3,56 +3,56 @@
 ![](../../../../~gitbook/image.md)Publicado: 16 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Love es una máquina Windows de dificultad fácil de HackTheBox que presenta un sistema de votación PHP vulnerable. La explotación inicial se basa en el Server-Side Request Forgery (SSRF) para acceder a servicios internos y obtener credenciales de administrador. Una vez autenticados, se explota una vulnerabilidad de ejecución remota de código (RCE) en el sistema de votación para ganar acceso inicial. La escalada de privilegios se logra abusando de la política de Windows "AlwaysInstallElevated" para ejecutar instaladores MSI con privilegios de SYSTEM.
-###🎯 Información de la Máquina
+### 🎯 Información de la Máquina
 ParámetroValorIP10.10.10.239SOWindows 10 Pro 19042Servicios principalesHTTP (80), HTTPS (443), MySQL (3306), WinRM (5985/5986)Dominiosstaging.love.htb, love.htb
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🔍 Escaneo de puertos TCP
+#### 🔍 Escaneo de puertos TCP
 
-####🛠️ Enumeración de servicios
+#### 🛠️ Enumeración de servicios
 
-####🌐 Configuración de hosts
+#### 🌐 Configuración de hosts
 En el puerto 443 el nmap nos devuelve el nombre del dominio, el cual es `staging.love.htb`.
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🖥️ Puerto 80 HTTP (http://10.10.10.239/)
+#### 🖥️ Puerto 80 HTTP (http://10.10.10.239/)
 A priori no vemos gran cosa salvo un panel de login de lo que parece ser una aplicación para un sistema de votación:![](../../../../~gitbook/image.md)Vemos que para autenticarnos necesitamos un ID de votante y una contraseña.
-####🔎 Fuzzing de directorios - Puerto 80
+#### 🔎 Fuzzing de directorios - Puerto 80
 Usamos dirsearch para realizar fuzzing de directorios y ver si encontramos algunos recursos interesantes que analizar a nuestro scope:
 ####### 🔐 Puerto 443 HTTPS (staging.love.htb)
 Al acceder al dominio `staging.love.htb` encontramos una aplicación web diferente.![](../../../../~gitbook/image.md)
-####🔍 Fuzzing de directorios - Puerto 443
+#### 🔍 Fuzzing de directorios - Puerto 443
 
-###🚨 Explotación - SSRF (Server-Side Request Forgery)
+### 🚨 Explotación - SSRF (Server-Side Request Forgery)
 
-####🔍 Descubrimiento de vulnerabilidad SSRF
+#### 🔍 Descubrimiento de vulnerabilidad SSRF
 Vemos algo interesante a la hora de acceder a la opción "Demo" y nos dirige al recurso `beta.php`. Nos pide introducir una URL con el sitio que queremos analizar para ver si tiene malware.![](../../../../~gitbook/image.md)
-####🧪 Prueba de concepto SSRF
+#### 🧪 Prueba de concepto SSRF
 Primero verificamos si podemos alcanzar nuestro host de ataque iniciando un servidor web en Python y haciendo una petición.![](../../../../~gitbook/image.md)Luego probamos si podemos acceder a servicios internos referenciando la dirección IP de la propia máquina hacia el puerto 5000:URL probada: `http://127.0.0.1:5000`![](../../../../~gitbook/image.md)Al explotar la vulnerabilidad SSRF, encontramos unas credenciales que parecen ser para el panel de administrador:![](../../../../~gitbook/image.md)Credenciales obtenidas: `admin:@LoveIsInTheAir!!!!`
-###💥 Explotación - RCE en Voting System
+### 💥 Explotación - RCE en Voting System
 
-####🔍 Identificación del software
+#### 🔍 Identificación del software
 El panel de administración pertenece a una aplicación llamada [Sourcecodester Voting System](https://www.sourcecodester.com).![](../../../../~gitbook/image.md)
-####🕵️ Búsqueda de exploits
+#### 🕵️ Búsqueda de exploits
 Buscamos exploits públicos para el software Voting System 1.0:
 Parece que el panel pertenece a una aplicación llamada [sourcecodester](https://www.sourcecodester.com)![](../../../../~gitbook/image.md)Encontramos un exploit que permite RCE autenticada, perfecto para nuestras credenciales obtenidas.
-####⚙️ Configuración del exploit
+#### ⚙️ Configuración del exploit
 Deberemos editar los parámetros relacionados con la IP y el puerto del servicio donde se encuentra el aplicativo así como los relacionados con la IP y el puerto donde recibiremos la shell reversa.Tambien debemos adaptar los parámetros INDEX_PAGE, LOGIN_URL, VOTE_URL y CALL_SHELL para que la ruta corresponda con la del aplicativo, ya que por ejemplo el /votesystem/ no existe en la aplicación que estamos tratando de explotar:La configuración quedaría de esta forma:
-####🎯 Ejecución del exploit
+#### 🎯 Ejecución del exploit
 🚪 Acceso inicial obtenidoUna vez lanzado el exploit recibimos la reverse shell ganando acceso como usuario phoebe.![](../../../../~gitbook/image.md)Una vez dentro revisamos el directorio Desktop del usuario Phoebe para obtener la primera flag:
 ##### 🚀 Escalada de privilegios
 
-####🔍 Enumeración de privilegios
+#### 🔍 Enumeración de privilegios
 Comenzamos a enumerar y realizar comprobaciones en busca de una vía potencial para la escalada de privilegios y encontramos que AlwaysInstallElevated está activo.
-####📋 ¿Qué es AlwaysInstallElevated?
+#### 📋 ¿Qué es AlwaysInstallElevated?
 Cuando AlwaysInstallElevated está habilitada (`0x1`), permite que los archivos `.msi` (Microsoft Installer) se ejecuten con privilegios de administrador, incluso si el usuario no tiene derechos administrativos.🛠️ Generación del payload maliciosoPara abusar de esto y escalar privilegios podemos:- Generar un payload msi con el que ganar una reverse shell de altos privilegios
 - Usar el script powerup para cargar el módulo y añadir un usuario nuevo al sistema.
 En este caso que vamos a optar por generar un payload con msvenom de la siguiente forma:Lo transferimos al host Windows usando un servidor web en python y usando curl:Ahora iniciamos un listener donde recibiremos la reverse shell con privilegios NT system
-####👑 Root Flag
+#### 👑 Root Flag
 Ejecutamos el binario y recibimos la reverse shell de altos privilegios![](../../../../~gitbook/image.md)Ya podemos obtener la flag root.txtLast updated 10 months ago- [📝 Descripción](#descripcion)
 - [🎯 Información de la Máquina](#informacion-de-la-maquina)
 - [🔭 Reconocimiento](#reconocimiento)

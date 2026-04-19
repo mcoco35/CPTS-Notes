@@ -3,34 +3,34 @@
 ![](../../../../~gitbook/image.md)Publicado: 02 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Analytics es una máquina Linux de dificultad Easy en HackTheBox que presenta un escenario realista de pentesting web. La máquina expone un servicio Metabase vulnerable que permite la ejecución remota de comandos sin autenticación previa (CVE-2023-38646). Tras obtener acceso inicial al contenedor, se realiza un movimiento lateral utilizando credenciales encontradas en variables de entorno para acceder al sistema host. Finalmente, se explota una vulnerabilidad de escalada local conocida como GameOver(lay) (CVE-2023-2640 & CVE-2023-32629) en el kernel de Ubuntu para obtener privilegios de root.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 http://analytical.htb![](../../../../~gitbook/image.md)Al hacer clic en opción Login somos redirigidos a un nuevo vhost en el que vemos que se está usando un servicio llamado Metabase.http://data.analytical.htb![](../../../../~gitbook/image.md)Descubrimiento de MetabaseDado que el fuzzing de directorios y de vhost no nos aporta nada relevante en ninguno de los subdominios, buscamos información sobre el servicio Metabase y rápidamente descubrimos que ha sido objeto de una vulnerabilidad CVE-2023-38646 que permite la ejecución remota de comandos con Pre-Auth.
-####💥 Explotación - CVE-2023-38646
+#### 💥 Explotación - CVE-2023-38646
 Encontramos algunos exploits públicos que merece la pena probar
 https://github.com/m3m0o/metabase-pre-auth-rce-pocEn primer lugar accedemos al siguiente endpoint y buscamos la cadena que corresponde a la versión y al setup-token:Primero comprobamos la versión para saber si nos sirve el exploit:![](../../../../~gitbook/image.md)A continuación obtenemos el token:http://data.analytical.htb/api/session/properties![](../../../../~gitbook/image.md)
-####🎪 Acceso inicial
+#### 🎪 Acceso inicial
 Este token es todo lo que necesitamos para ejecutar el exploit de la siguiente forma:Y ganamos acceso a la máquina como usuario metabase:![](../../../../~gitbook/image.md)
-####🔑 Escalada de privilegios
+#### 🔑 Escalada de privilegios
 En el directorio raíz vemos un archivo .dockerenv, lo cual nos permite a priori intuir que podemos estar dentro de un contenedor:![](../../../../~gitbook/image.md)Enumeramos variables de entorno
-####🚀 Movimiento lateral
+#### 🚀 Movimiento lateral
 
-####🔓 Escape del contenedor via SSH
+#### 🔓 Escape del contenedor via SSH
 Buscamos la forma de escapar del contenedor. Dado que ahora tenemos las credenciales`metalytics:An4lytics_ds20223#` vamos a usarlas para tratar de iniciar sesión en el servicio ssh y obtener la primera flag en el directorio del usuario metalytics
-####👑 Escalada de privilegios a root
+#### 👑 Escalada de privilegios a root
 Verificamos que el metalytics no puede ejecutar algún comando como root:Tampoco obtenemos nada interesante tras enumerar binarios con permisos SUID ni capabilties.🎮 GameOver(lay) - CVE-2023-2640 & CVE-2023-32629Sin embargo enumeramos la versión del kernel y vemos que podría ser vunerable a GameOverlay Vulnerability CVE-2023–2640 & CVE-2023–32629La vulnerabilidad conocida como GameOver(lay) afecta a versiones específicas del kernel de Linux en Ubuntu, incluyendo la versión 6.2.0. Esta vulnerabilidad permite a un usuario local sin privilegios escalar sus permisos hasta obtener acceso como root.[wiz.io+5Medium+5The MasterMinds Notes | Motasem Hamdan+5](https://medium.com/thesecmaster/how-to-fix-gameover-lay-two-local-privilege-escalation-vulnerabilities-in-ubuntu-linux-kernel-93124dbe51e7?utm_source=chatgpt.com)[vk9-sec.com](https://vk9-sec.com/cve-2023-32629-cve-2023-2640privilege-escalation-gameoverlay-ubuntu-privilege-escalation/?utm_source=chatgpt.com)
-####🧩 ¿En qué consiste la vulnerabilidad?
+#### 🧩 ¿En qué consiste la vulnerabilidad?
 GameOver(lay) abarca dos vulnerabilidades distintas en el módulo OverlayFS del kernel de Ubuntu:- CVE-2023-2640: Permite que un usuario sin privilegios establezca atributos extendidos privilegiados en archivos montados, lo que puede llevar a la ejecución de código con privilegios elevados.
 - CVE-2023-32629: Se produce cuando se omiten las comprobaciones de permisos al copiar metadatos de inodos, lo que también puede resultar en una escalada de privilegios.
 Ambas vulnerabilidades surgen debido a modificaciones específicas realizadas por Ubuntu en el módulo OverlayFS, que introdujeron flujos de código inseguros al omitir comprobaciones de permisos en ciertas operacionesUsaremos el siguiente exploit para llevar a cabo la escalada:https://github.com/g1vi/CVE-2023-2640-CVE-2023-32629/blob/main/exploit.shLast updated 10 months ago- [📝 Descripción](#descripcion)
@@ -190,7 +190,7 @@ Linux analytics 6.2.0-25-generic #25~22.04.2-Ubuntu SMP PREEMPT_DYNAMIC Wed Jun 
 ```
 
 ```
-#!/bin/bash
+# !/bin/bash
 
 # CVE-2023-2640 CVE-2023-3262: GameOver(lay) Ubuntu Privilege Escalation
 # by g1vi https://github.com/g1vi

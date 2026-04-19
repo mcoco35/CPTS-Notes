@@ -3,9 +3,9 @@
 ![](../../../../~gitbook/image.md)Publicado: 05 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Precious es una máquina Linux de dificultad fácil en Hack The Box que presenta una aplicación web que convierte URLs en archivos PDF. La explotación inicial se basa en una vulnerabilidad de inyección de comandos (CVE-2022-25765) en la librería pdfkit v0.8.7.2, que permite la ejecución remota de código a través de parámetros mal sanitizados en la URL de entrada.Una vez dentro del sistema, se encuentra credenciales hardcodeadas en archivos de configuración de Ruby que permiten el movimiento lateral al usuario henry. La escalada de privilegios se logra explotando una vulnerabilidad de deserialización YAML en un script Ruby que henry puede ejecutar como root sin contraseña, permitiendo la ejecución de código arbitrario con privilegios administrativos.
-###🏷️ Categorías
+### 🏷️ Categorías
 - 🌐 Web Application Security: Análisis y explotación de aplicaciones web
 - 💉 Command Injection: CVE-2022-25765 en pdfkit
 - 🔐 Credential Discovery: Búsqueda de credenciales en archivos de configuración
@@ -15,25 +15,25 @@ Precious es una máquina Linux de dificultad fácil en Hack The Box que presenta
 - 🔍 Information Gathering: Reconocimiento y enumeración de servicios
 - 🏃 Lateral Movement: Movimiento entre usuarios del sistema
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP (http://precious.htb/)
+#### 80 HTTP (http://precious.htb/)
 Al acceder a http://precious.htb/ encontramos un sitio web que permite converter una web que introduzcamos introduciendo una url a formato PDF![](../../../../~gitbook/image.md)🕷️Fuzzing de directoriosRealizamos fuzzing de directorios con herramientas como feroxbuster o dirsearch pero no obtenemos ningún resultado:🕷️Fuzzing de vhostsTampoco encontramos ningún vhost
-####🧪 Probando la aplicación
+#### 🧪 Probando la aplicación
 Dado que la aplicación espera una URL para convertirla a formato pdf, probamos algunos payloads como file:///etc/passwd http://127.0.0.1 pero son bloqueados.![](../../../../~gitbook/image.md)Si introducimos una URL válida como http://www.google.es e interceptamos la petición con burp enueramos que el servidor está usando Phusion Passenger(R) 6.0.15 y Ruby.![](../../../../~gitbook/image.md)Ahora probamos a levantar un servidor web en python en nuestro host de ataque y hacemos una petición al mismo.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Y comprobamos que genera y descarga el pdf con el contenido:![](../../../../~gitbook/image.md)Ahora que hemos descargado el PDF, echamos un vistazo a los metadatos del mismo. Usamos por ejemplo la herramienta exiftool y logramos enumerar la herramienta usada para su generación:![](../../../../~gitbook/image.md)Si no tenemos exiftool también podemos enumerar esta información en las propiedades del documento usando algún lector de pdf:![](../../../../~gitbook/image.md)
-####🚪 Acceso Inicial - Explotación
+#### 🚪 Acceso Inicial - Explotación
 
-####CVE-2022–25765
+#### CVE-2022–25765
 pdfkit v0.8.7.2 - Command InjectionBuscamos si hay algún exploit pública para para esa versión de la herramienta y encontramos un candidato:![](../../../../~gitbook/image.md)El exploit abusa de una mala sanitización del campo de entrada URL y explota una vulnerabilidad de inyección de comandos. Tras leer la documentación de la vulnerabilidad, parece que podemos inyectar comandos en el campo de entrada añadiendo `?name=%20`en la solicitud una solicitud HTTP GET con un parámetro `name`Ejemplo:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)La PoC funciona, así que ahora intentemos obtener una RCE usando el siguiente payload:![](../../../../~gitbook/image.md)Y ganamos acceso a la máquina![](../../../../~gitbook/image.md)Enumeramos la máquina y encontramos dos usuariosNo tenemos permisos para leer la flag así que continuamos enumerando la máquina y encontramos un fichero de configuración en el directorio del usuario henry que podría ser una contraseña:Logramos autenticarnos como henry y obtener la primera flag
-####🔑 Escalada de privilegios
+#### 🔑 Escalada de privilegios
 Buscamos ahora vías potenciales de escalada a root y lo hacemos comenzando por revisar si henry puede ejecutar algún comando o binario como sudo:Observamos que hay un script en ruby que henry puede ejecutar como root sin que la contraseña sea solicitada. Comprobamos los permisos que tiene henry sobre dicho script y vemos que puede leer y ejecutar:Si tratamos de ejecutarlo obtenemos un error:Analicemos un poco el contenido del scriptEsta línea es crítica: `YAML.load` ya que ejecuta código Ruby arbitrario si se le da un archivo `.yml` malicioso. Es un YAML deserialisation vulnerability muy conocido en Ruby.[Este resumen](https://gist.github.com/staaldraad/89dffe369e1454eedd3306edc8a7e565#file-ruby_yaml_load_sploit2-yaml) presenta un ejemplo muy claro y conciso de una carga útil que puede usarse para explotar la deserialización de YAML en Ruby. Se basa en este [artículo mucho más extenso y detallado](https://www.elttam.com.au/blog/ruby-deserialization/)Para abusar de esto creamos un archivo dependencies.yml con el siguiente contenido en /dev/shm:Este payload lo que hará será crear una copia de /bin/bash en el directorio tmp con el nombre x3m1sec y le otorgará SUID. A continuación se muestra el archivo generado:![](../../../../~gitbook/image.md)Ahora simplemente nos quedaría elevar privilegios haciendo uso de la flag -p y escalamos a root:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🏷️ Categorías](#categorias)
 - [🔭 Reconocimiento](#reconocimiento)

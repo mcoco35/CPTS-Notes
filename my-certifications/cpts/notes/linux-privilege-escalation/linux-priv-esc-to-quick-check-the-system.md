@@ -1,19 +1,19 @@
 # Linux-priv-esc-to-quick-check-the-system
 
-####SSH to Target
+#### SSH to Target
 
 ```
 ssh htb-student@
 ```
 
-####Process and User Enumeration
+#### Process and User Enumeration
 
 ```
 ps aux | grep root          # See processes running as root
 ps au                       # See logged in users
 ```
 
-####User Directory and SSH Key Check
+#### User Directory and SSH Key Check
 
 ```
 ls /home                    # View user home directories
@@ -21,50 +21,50 @@ ls -l ~/.ssh                # Check for SSH keys for current user
 history                     # Check the current user's Bash history
 ```
 
-####Sudo and Cron Jobs
+#### Sudo and Cron Jobs
 
 ```
 sudo -l                     # Check sudo privileges
 ls -la /etc/cron.daily      # Check for daily Cron jobs
 ```
 
-####Disk and Filesystem Information
+#### Disk and Filesystem Information
 
 ```
 lsblk                       # Check for unmounted file systems/drives
 ```
 
-####Writable Directories and Files
+#### Writable Directories and Files
 
 ```
 find / -path /proc -prune -o -type d -perm -o+w 2>/dev/null    # Find world-writeable directories
 find / -path /proc -prune -o -type f -perm -o+w 2>/dev/null    # Find world-writeable files
 ```
 
-####System Information
+#### System Information
 
-####Compiling Exploits
+#### Compiling Exploits
 
-####Process Monitoring
+#### Process Monitoring
 
-####SUID and SETGID Files
+#### SUID and SETGID Files
 
-####Privilege Escalation Techniques
+#### Privilege Escalation Techniques
 
-####Path Manipulation
+#### Path Manipulation
 
-####Config File Discovery
+#### Config File Discovery
 
-####Shared Object and Binary Analysis
+#### Shared Object and Binary Analysis
 
-####LXD Privilege Escalation
+#### LXD Privilege Escalation
 
-####NFS Exploitation
+#### NFS Exploitation
 
-####Tmux Shared Sessions
+#### Tmux Shared Sessions
 
-####System Audit
-Last updated 10 months ago
+#### System Audit
+
 ```
 uname -a                    # Check the Kernel version
 cat /etc/lsb-release        # Check the OS version

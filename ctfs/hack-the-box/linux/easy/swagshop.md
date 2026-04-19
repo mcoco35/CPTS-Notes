@@ -3,32 +3,32 @@
 ![](../../../../~gitbook/image.md)Publicado: 02 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 SwagShop es una máquina Linux de dificultad Easy que presenta una tienda online construida con Magento CMS versión 1.9.0.0. La explotación inicial se realiza a través de una vulnerabilidad de SQL injection (CVE-2015-1397) conocida como "Shoplift" que permite crear un usuario administrador. Una vez autenticados, se aprovecha la funcionalidad de plantillas de Magento para ejecutar código PHP malicioso y obtener una reverse shell. La escalada de privilegios se consigue mediante el abuso de permisos sudo mal configurados que permiten ejecutar vi como root.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP
+#### 80 HTTP
 http://swagshop.htb/![](../../../../~gitbook/image.md)
-####📂 Fuzzing de directorios
+#### 📂 Fuzzing de directorios
 Realizamos fuzzing de directorios usando diversas herramientas como dirsearch, gobuster o feroxbuster:Encontramos un recurso que nos podría dar información sobre la versión que se está utilizando.Pero solo da notas de lanzamiento hasta la versión 1.7.0.2, y luego da una url para visitar para notas de lanzamiento de versión posterior, por lo que esto no es útil en este caso, aunque podría tratarse de una versión antigua.http://swagshop.htb/RELEASE_NOTES.txt![](../../../../~gitbook/image.md)
-####🎯 Explotación Inicial
+#### 🎯 Explotación Inicial
 💉 SQL Injection - Magento Shoplift (CVE-2015-1397)Existe un exploit para versiones antiguas que nos permite exploitar un SQLi para añadir un usuario administrador en la base de datos de la aplicación:https://github.com/joren485/Magento-Shoplift-SQLI/blob/master/poc.py
-####🔓 Acceso al Panel de Administración
+#### 🔓 Acceso al Panel de Administración
 Ahora, podemos verificar que las credenciales funcionan accediendo al panel de administración de Magento en http://10.10.10.140/index.php/admin y usando las credenciales ypwq:123![](../../../../~gitbook/image.md)Ahora que ya estamos autenticados, existen varias formas de obtener el RCE partiendo de una autenticación como usuario administrador. Una de ellas es usar alguno de los exploits públicos![](../../../../~gitbook/image.md)
-####🐸 Froghopper Attack - Template Injection
+#### 🐸 Froghopper Attack - Template Injection
 Otra por ejemplo es usar la técnica froghopper attack que se detalle en este paper:https://www.foregenix.com/blog/anatomy-of-a-magento-attack-froghopperPara llevar a cabo este ataque, la cadena sería la siguiente:1 - System -> Configuration -> Advanced -> Developer
 En template settings habilitamos esta opción (podremos hacerlo ya que somos admin):![](../../../../~gitbook/image.md)2 - Catalog -> Manage categoriesCreamos una nueva categoría y en el selector de archivos vamos a subir un archivo con extensión poc.php.png con el siguiente contenido:![](../../../../~gitbook/image.md)Haciendo hovering sobre el archivo que hemos subido vemos que se ha alojado en la ruta: http://swagshop.htb/media/catalog/category/poc.php.png3 - Newsletter -> TemplateCreamos un nuevo template en el que vamos a referenciar nuestro archivo para abusar de un LFI el archivo al que quieres apuntar, en este caso nos interesa apuntar a la php reverse shell que hemos subido.Guardamos haciendo click en Save Template.Nota: Aquí el problema que se nos plantea en que no sabemos en qué directorio estamos actualmente (/var/www/html/a/b/c etc), por lo que tendremos que ir jugando e ir bajando directorios hasta que lo encontremos.Para ello vamos primero a iniciar un listener con netcat:Para probar la explotación, hacemos uso del botón Save Template, vamos a trás, pinchamos en la plantilla y por útlimo en Preview Template para que se desencadene la llamada:![](../../../../~gitbook/image.md)Y obtenemos la RCE:Obtenemos la primera flag del directorio del usuario haris:
-####👑 Escalada a Root
+#### 👑 Escalada a Root
 
-####🔍 Enumeración de Privilegios Sudo
+#### 🔍 Enumeración de Privilegios Sudo
 Verificamos si hay algún comando que podamos ejecutar como root sin que se requiera contraseña y vemos que podemos usar vi para leer cualquier archivo que haya en /var/www/html y se está haciendo uso de wildcard, lo cual es peligroso:Por lo que podríamos simplemente leer cualquier archivo que se encuentre en ese directorioY una vez dentro del contexto de vi, ejecutar lo siguiente:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)

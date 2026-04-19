@@ -3,41 +3,41 @@
 ![](../../../../~gitbook/image.md)Publicado: 13 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Querier es una máquina Windows de dificultad media que simula un entorno corporativo con servicios SQL Server y SMB. La explotación inicial se basa en el análisis de un archivo Excel con macros maliciosas encontrado en un recurso compartido SMB, que revela credenciales de base de datos. Posteriormente, se aprovecha la funcionalidad de autenticación NTLM del SQL Server para capturar hashes y realizar ataques de fuerza bruta. La escalada de privilegios se logra mediante la explotación del privilegio `SeImpersonatePrivilege` utilizando técnicas de Token Impersonation con JuicyPotatoNG.Conceptos clave:- 🔍 Análisis de metadatos y macros en documentos Office
 - 🗄️ Explotación de SQL Server con xp_cmdshell
 - 🔑 Captura de hashes NTLM mediante NTLM Relay
 - 🚀 Escalada de privilegios con SeImpersonatePrivilege
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🔍 Escaneo de puertos
+#### 🔍 Escaneo de puertos
 
-####🛠️ Enumeración de servicios
+#### 🛠️ Enumeración de servicios
 
-###🎯 Enumeración de Servicios
+### 🎯 Enumeración de Servicios
 
-####📁 Puerto 445 TCP - SMB
+#### 📁 Puerto 445 TCP - SMB
 Dado que no disponemos de credenciales, tratamos de enumerar posibles recursos compartidos haciendo uso de una null sessionNos conectamos al recurso compartido Reports y enumeramos su contenido y descargamos el archivo encontrado:📊 Análisis del archivo ExcelUna vez descargado, usamos el comando `file` el tipo de archivo:Abrimos el documento pero está vacío, así que revisamos los metadatos usando la herramienta `exiftool` y descubrimos un usuario llamado Luis y que el archivo contiene una macro:![](../../../../~gitbook/image.md)Para revisar esto más en profundidad y analizar la macro podemos usar la herramienta olevba que podemos descargar de https://raw.githubusercontent.com/decalage2/oletools/refs/heads/master/oletools/olevba.pySi es la primera vez que la instalamos, deberemos instalar algunas dependencias e idealmente es mejor usar un entorno virtual con pyenv.Una ves instalada, ejecutamos la herramienta:En los resultados, vemos que la macro contiene una cadena de conexión a una base de datos Microsoft SQL Server:- Servidor (Server): `QUERIER`
 - Base de datos (Database): `volume`
 - Usuario (Uid): `reporting`
 - Contraseña (Pwd): `PcwTWTHRwryjc$c6`
 - Trusted_Connection: `no` (lo cual indica que no se está utilizando autenticación integrada de Windows, sino autenticación SQL Server con usuario y contraseña)
 
-####🗄️ Explotación de SQL Server
+#### 🗄️ Explotación de SQL Server
 
-####🔐 Conexión inicial con credenciales
+#### 🔐 Conexión inicial con credenciales
 Dado que la máquina expone un servicio Microsoft SQL Server, podemos aprovechar para probar las credenciales que hemos obtenido en el paso anterior.Usaremos la herramienta impacket-mssqlclient para realizar la conexión:![](../../../../~gitbook/image.md)🔍 Enumeración de la base de datos![](../../../../~gitbook/image.md)Verificamos si podemos habilitar `xp_cmdshell` para la ejecución de comandos, pero comprobamos que no tenemos los privilegios adecuados:![](../../../../~gitbook/image.md)🎣 Captura de hash NTLMOptamos por buscar otra vía potencial de ataque. Podemos iniciar un servidor smb con impacket y hacer una petición a un recurso inexistente obligando al usuario del host querier a autenticarse contra nuestra máquina obteniendo así el hash NTLMv2 del usuario, ya que aunque no podemos autenticarnos con este tipo de hash sí que puede ser vulnerable a ataques de fuerza bruta o diccionario.Para ello, iniciamos primero el servidor smb en nuestro host de ataque usando impacket-smbserver:A continuación, desde la consola MSSQL a la que hemos ganado acceso, hacemos la petición y obtnenemos el hash NTLMv2![](../../../../~gitbook/image.md)🔓 Crackeo de hash NTLMObtenemos el hash. Verificamos el tipo de hash y el código para intentar crackearlo con hashcat:![](../../../../~gitbook/image.md)Logramos obtener la contraseña crackeando el hash usando hashcat y el diccionario rockyou:![[Writeups/HTB/Road to OSCP/Lainkusanagi OSCP/Querier/7.png]]🔑 Nueva credencial obtenida:- Usuario: `mssql-svc`
 - Contraseña: `corporate568`
 
-####💥 Escalada de Privilegios en SQL Server
+#### 💥 Escalada de Privilegios en SQL Server
 🔐 Reconexión con nuevas credencialesAhora, nos autenticamos nuevamente en el servicio mssql usando impacket con las nuevas credenciales obtenidas:⚡ Habilitación de xp_cmdshellProbamos a ver si este usuario sí que tiene los previlegios adecuados para habilitar xp_cmdshell y vemos que sí, lo cual es una buena señal y una vía potencial para llevar a cabo una RCE:![[Writeups/HTB/Road to OSCP/Lainkusanagi OSCP/Querier/9.png]]Confirmamos que ya podemos ejecutar comandos![](../../../../~gitbook/image.md)
-####🚀 Explotación de RCE
+#### 🚀 Explotación de RCE
 🔄 Configuración de reverse shellCon `xp_cmdshell` se puede ejecutar un programa como `netcat` desde un recurso compartido y asi tener una revershell , usamos `impacket-smbserver` y nos ponemos en escuhca con
 Ahora, desde la sesión mssql podemos usar IEX para ejecutar directamente el script:Copiamos nc.exe al directorio donde habíamos iniciado previamente el servidor smbserver en el recurso smbShare:![](../../../../~gitbook/image.md)Iniciamos un listener en nuestro host de ataque usando netcat:Ejecutamos la reverse shell usando netcat desde el recurso compartido contra nuestro host de ataque:Recibimos la reverse shell:![](../../../../~gitbook/image.md)Obtenemos la primera flag en el directorio Desktop del usuario mssql-svc
-####🎯 Escalada de Privilegios Final
+#### 🎯 Escalada de Privilegios Final
 🔍 Enumeración de privilegiosTras enumerar la máquina y no encontrar ningún recurso que nos sirva como una vía potencial para la escalada, enumeramos los privilegios del usuario mssql-svc y vemos que tiene habilitado el privilegioSeImpersonatePrivilege:![](../../../../~gitbook/image.md)Enumeramos también la versión del sistema:![](../../../../~gitbook/image.md)Uso de MimikatzPodemos probar primero con mimikatz para ver si podemos hacer**Token Kidnapping **Mimikatz puede usar este privilegio para "robar" tokens de procesos privilegiados y ejecutar comandos como SYSTEM.Vamos a ello.Transferimos mimikatz al directorio C:\TempPero cuando lo ejecutamos lo detecta el antivirus y lo borra:![](../../../../~gitbook/image.md)🥔 Uso de JuicyPotatoNGOtra alternativa es usar Juicy Potato / Rotten Potato / Juicy PotatoNG:Son Herramientas que explotan la capacidad de impersonar el token de un servicio con privilegios SYSTEM a través del SeImpersonatePrivilege para elevar privilegios a SYSTEM. Necesitas encontrar servicios COM o DCOM mal configurados.🔸 Rotten Potato (original - desactualizado)- Explotaba DCOM/RPC para obtener tokens SYSTEM.
 - Ya no funciona en versiones modernas de Windows (post-Win10/Server 2016).
 🔸 Juicy Potato- Reimplementación mejorada que busca CLSIDs de servidores COM vulnerables.

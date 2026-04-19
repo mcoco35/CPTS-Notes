@@ -3,26 +3,26 @@
 ![](../../../../~gitbook/image.md)Publicado: 09 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Jerry es una máquina Windows de dificultad fácil de HackTheBox que presenta un servidor Apache Tomcat 7.0.88 ejecutándose en el puerto 8080. La vulnerabilidad principal radica en el uso de credenciales débiles para acceder al panel de administración de Tomcat Manager. Una vez que se obtiene acceso al manager, es posible desplegar una aplicación web maliciosa (.war) que contiene una reverse shell, lo que permite obtener acceso completo al sistema como NT AUTHORITY\SYSTEM.Esta máquina es ideal para practicar conceptos fundamentales como el reconocimiento de servicios web, la explotación de credenciales por defecto, y el despliegue de payloads maliciosos en servidores de aplicaciones Java. Es una excelente introducción a las técnicas de post-explotación en entornos Windows corporativos.
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####Escaneo de puertos TCP
+#### Escaneo de puertos TCP
 
-####Enumeración de servicios
+#### Enumeración de servicios
 ⚠️ Importante: Detectamos durante la fase de enumeración con nmap que se está realizando virtual hosting. Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
 ###### 🌐 Enumeración Web
 
-####🚀 Puerto 8080 - Apache Tomcat 7.0.88
+#### 🚀 Puerto 8080 - Apache Tomcat 7.0.88
 http://10.10.10.95:8080/![](../../../../~gitbook/image.md)Las credenciales por defecto `tomcat:admin` no funcionan.![](../../../../~gitbook/image.md)
 Sin embargo probamos con las que aparecen en el banner de acceso denegado: `tomcat:s3cret`y ganamos acceso al manager:![](../../../../~gitbook/image.md)
-###🎯 Explotación
+### 🎯 Explotación
 
-####💥 Despliegue de WAR malicioso
+#### 💥 Despliegue de WAR malicioso
 Dado que tenemos disponible el módulo para desplegar aplicaciones .war, usamos la herramienta msfvenom para generar una reverse shell usando un archivo malicioso con extensión .war:Subimos el .war y lo desplegamos:![](../../../../~gitbook/image.md)Verificamos que se ha desplegado correctamente nuestra aplicación maliciosa:![](../../../../~gitbook/image.md)Iniciamos un listener con netcatEjecutamos la aplicación y obtenemos la reverse shell obteniendo una sesión como NT Authority System:![](../../../../~gitbook/image.md)
-####🏆 Post-Explotación
+#### 🏆 Post-Explotación
 Obtenemos las flags en el directorio Desktop del usuario Administrator![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🎯 Explotación](#explotacion)

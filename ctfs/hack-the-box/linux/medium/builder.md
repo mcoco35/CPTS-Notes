@@ -3,38 +3,38 @@
 ![](../../../../~gitbook/image.md)Publicado: 06 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Medium
-###📝 Descripción
+### 📝 Descripción
 Builder es una máquina Linux de dificultad media que aloja un servidor Jenkins vulnerable. La máquina presenta una vulnerabilidad de lectura de archivos locales (LFI) en Jenkins a través del CVE-2024-23897, que permite acceder a archivos del sistema sin autenticación. Esta vulnerabilidad surge por el uso de la librería args4j en el CLI de Jenkins, donde argumentos que comienzan con `@` seguidos de una ruta de archivo son interpretados automáticamente como contenido del archivo.El proceso de explotación incluye el uso de esta vulnerabilidad para extraer archivos de configuración de Jenkins, específicamente archivos XML que contienen hashes de contraseñas de usuarios. Una vez obtenidas las credenciales mediante fuerza bruta, se aprovecha la consola de scripts de Jenkins (Groovy) para ejecutar código arbitrario y obtener una shell reversa. Finalmente, se descubren credenciales SSH almacenadas en el sistema Jenkins para escalar privilegios al usuario root.Categorías: 🔐 Credential Harvesting, 🌐 Web Exploitation, 🐳 Container Escape, 🔑 SSH Key Extraction, 💻 Jenkins Security
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🏗️ Puerto 8080 HTTP (Jenkins 2.441)
+#### 🏗️ Puerto 8080 HTTP (Jenkins 2.441)
 Accedemos al puerto 8080 y descubrimos un servicio Jenkins. A priori no podemos enumerar gran cosa salvo un usuario llamado jennifer y la versión de este servicio que es la 2.441 que es conocida por presentar una vulnerabilidad de tipo Local File Inclusion.![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)Y un panel de login en el que las credenciales por defecto no parecen funcionar.![](../../../../~gitbook/image.md)
-####CVE-2024-23897
+#### CVE-2024-23897
 ¿Qué es CVE‑2024‑23897?- Afecta a Jenkins Core (antes de la versión 2.442) y Jenkins LTS (antes de la versión 2.426.3). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2024-23897?utm_source=chatgpt.com)[jenkins.io](https://www.jenkins.io/security/advisory/2024-01-24/?utm_source=chatgpt.com)
 - Se origina por una característica de la librería args4j utilizada en el CLI: cuando un argumento comienza con `@` seguido de un camino de archivo, Jenkins reemplaza automáticamente esa sintaxis por el contenido del archivo — incluso si no estás autenticado.
 
-####🔓 Cómo se explota
+#### 🔓 Cómo se explota
 - El atacante descarga `jenkins-cli.jar` del servidor Jenkins.
 - Usa `@/ruta/al/archivo` como argumento en un comando CLI, provocando que el contenido del archivo se revele. [blog.certcube.com](https://blog.certcube.com/cve-2024-23897-jenkins-arbitrary-file-read-vulnerability/?utm_source=chatgpt.com)[github.com](https://github.com/verylazytech/CVE-2024-23897?utm_source=chatgpt.com)
 - Con los secretos obtenidos, podrían escalar a RCE usando los vectores mencionados arriba.
 En este caso decido usar un script en python en lugar de usar jenkins-cli.jar aunque en caso de optar por la primera opción el comando a utilizar sería algo como esto:🐍 Exploit en PythonConfirmamos la vulnerabilidad LFI leyendo el archivo /etc/passwd del sistema![](../../../../~gitbook/image.md)Vemos que hay un usuario llamado jenkins en el sistema. Buscando información sobre donde guarda Jenkins las credenciales de usuario, vemos que existe un archivo initialAdminPassword que debería ubicarse en `/var/jenkins_home/secrets/initialAdminPassword` pero en este caso no obtenemos resultado:![](../../../../~gitbook/image.md)Sin embargo, buscando y leyendo documentación sobre configuración de jenkins https://dev.to/pencillr/spawn-a-jenkins-from-code-gfa?source=post_page-----143ad7fde347---------------------------------------encontramos que hay algunos otros ficheros como config.xml y users.xml que pueden ser de utilidad:📁 /var/jenkins_home/users/users.xml📁 /var/jenkins_home/config.xmlLo interesante de esta información está en la clave `jennifer_12108429903186576833`. Podemos usarla para continuar enumerando la información específica de este usuario:📁 /var/jenkins_home/users/jennifer_12108429903186576833/config.xml
-####🔓 Cracking del Hash
+#### 🔓 Cracking del Hash
 Encontramos el hash de tipo bcrypt usuario jennifer:![](../../../../~gitbook/image.md)Usamos hashcat y el diccionario rockyou para crackear este hash y obtener la contraseña:![](../../../../~gitbook/image.md)
-####🚀 Acceso Inicial
+#### 🚀 Acceso Inicial
 Volvemos ahora al panel de login Jenkins y nos autenticamos como jennifer:![](../../../../~gitbook/image.md)Una vez dentro, como jennifer es admin ahora tenemos habilitadas todas las opciones del árbol de la izquierda, entre ellas está la función script console:![](../../../../~gitbook/image.md)Esta consola permite a un usuario ejecutar Apache [Groovy](https://en.wikipedia.org/wiki/Apache_Groovy) scripts, que son un lenguaje compatible con Java orientado a objetos. El lenguaje es similar a Python y Ruby. El código fuente de Groovy se compila en Java Bytecode y puede ejecutarse en cualquier plataforma que tenga JRE instalado.Usando esta consola de scripts, es posible ejecutar comandos arbitrarios, funcionando de manera similar a un shell web. Por ejemplo, podemos usar el siguiente fragmento para ejecutar el `id` comando.![](../../../../~gitbook/image.md)Vemos que funcione y nos devuelve como el resultado del id del usuario jenkins.Ahora veamos cómo podemos aprovechar esto para ganar acceso a la máquina. Podemos cambiar el payload anterior por:Iniciamos un listener con netcat:Ejecutar los comandos anteriores da como resultado una conexión de shell inversa.![](../../../../~gitbook/image.md)
-####🛠️ Mejora de la TTY
+#### 🛠️ Mejora de la TTY
 
-####🐳 Análisis del Entorno
+#### 🐳 Análisis del Entorno
 Al tratar de enumerar usuarios en el directorio /home vemos que no hay nada. ¿Será que estamos dentro de un contenedor?Tal como sospechaba, estamos dentro de un contenedor tal como podemos confirmar viendo el fichero .dockerenv en la raíz del sistema:La flag user.txt la encontramos en el directorio `/var/jenkins_home`![](../../../../~gitbook/image.md)
-####🔑 Escalada de Privilegios
+#### 🔑 Escalada de Privilegios
 Justo en el mismo directorio donde se ubica de la primera flag, vemos unos archivos con nombres que invitan a ver qué son llamados secret.key, secret.key.not-so-secret y secrets:Parece una clave ssh, pero no en el formato que se usa habitualmente sino que parece estar en hexadecimal. Quizás si logramos obtener una llave ssh podemos escapar del contenedor y lograr una escalada de privilegios.![](../../../../~gitbook/image.md)Investigando sobre esto descubrimos un repositorio con utilidades de jenkins:
 https://github.com/tarvitz/jenkins-utils![](../../../../~gitbook/image.md)Hay un script que podemos usar en la utilidad /script de nuestro jenkins para extraer los secrets de jenkins master siempre que seamos administradores. Como en este caso lo somos, basta con ejecutarlo y obtenemos la clave:![](../../../../~gitbook/image.md)Copiamos la clave privada y la copiamos en un fichero en nuestro host de ataque y le damos permisos 600. Finalmente nos conectamos y ganamos acceso como root:Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
@@ -304,7 +304,7 @@ jennifer
 
 false
 
-#jbcrypt:$2a$10$UwR7BpEH.ccfpi1tv6w/XuBtS44S7oUpR2JYiobqxcDQJeN/L4l1a
+# jbcrypt:$2a$10$UwR7BpEH.ccfpi1tv6w/XuBtS44S7oUpR2JYiobqxcDQJeN/L4l1a
 ```
 
 ```

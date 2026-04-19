@@ -4,69 +4,69 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Return es una máquina Windows de dificultad Easy que simula un entorno de Active Directory con un panel de administración de impresoras web. La máquina presenta vulnerabilidades relacionadas con la configuración insegura de autenticación LDAP y privilegios excesivos del usuario de servicio.La explotación inicial se basa en la captura de credenciales en texto plano mediante la manipulación de la configuración de un panel de administración de impresoras que utiliza LDAP sin cifrado (puerto 389). Una vez obtenidas las credenciales, se aprovechan los privilegios del grupo "Server Operators" para modificar servicios existentes y lograr escalada de privilegios a SYSTEM.Esta máquina es ideal para practicar técnicas de:- Enumeración de servicios en entornos Windows/AD
 - Captura de credenciales mediante configuraciones inseguras
 - Escalada de privilegios mediante manipulación de servicios
 - Uso de WinRM para acceso remoto
 
-###🎯 Resumen
+### 🎯 Resumen
 AspectoDetalleVulnerabilidad PrincipalConfiguración insegura de LDAP (puerto 389 sin cifrado)Vector de AccesoCaptura de credenciales mediante manipulación de configuración webUsuario Inicialsvc-printerEscalada de PrivilegiosModificación de servicios (grupo Server Operators)Herramientas PrincipalesNmap, Evil-WinRM, Netcat, sc.exe
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🔍 Escaneo de puertos
+#### 🔍 Escaneo de puertos
 
-####🔬 Enumeración de servicios
+#### 🔬 Enumeración de servicios
 
-####🎯 Análisis de servicios identificados
+#### 🎯 Análisis de servicios identificados
 Servicios críticos identificados:- Puerto 80 (HTTP): Panel de administración de impresoras HTB
 - Puerto 389 (LDAP): Active Directory LDAP sin cifrado
 - Puerto 5985 (WinRM): Windows Remote Management habilitado
 - Puerto 445 (SMB): Compartición de archivos de Windows
 - Puerto 88 (Kerberos): Autenticación de dominio
 ⚠️ Importante: Debemos añadir el siguiente vhost a nuestro fichero /etc/hosts
-###🚪 Acceso Inicial
+### 🚪 Acceso Inicial
 
-####📁 Enumeración SMB
+#### 📁 Enumeración SMB
 Dado que no disponemos de credenciales, tratamos de enumerar sin éxito este servicio mediante una sesión nula:
-####🔐 Enumeración LDAP
+#### 🔐 Enumeración LDAP
 Tampoco logramos enumerar nada de forma anónima contra LDAP:
-####🌐 Análisis del servicio HTTP (Puerto 80)
+#### 🌐 Análisis del servicio HTTP (Puerto 80)
 ![](../../../../~gitbook/image.md)Vemos una cuenta de usuario que se está autenticando contra LDAP:![](../../../../~gitbook/image.md)Añadimos el vhost printer.return.local a nuestro fichero /etc/hosts.En la imagen anterior en la pestaña "Settings" vemos que la impresora utiliza el puerto LDAP inseguro 389 en lugar de LDAPS 636 seguro para la comunicación, lo que significa que las credenciales se pueden capturar en texto claro.
-####🎣 Captura de credenciales
+#### 🎣 Captura de credenciales
 Dado que tenemos permisos de edición, podemos manipular la petición para dirigirla a un recurso nuestro en lugar de printer.return.local y al hacer clic en "Update" podremos capturar las credenciales.Para hacer esto, una forma sería iniciar un listener con netcat en el puerto 389 de nuestro host de ataque:A continuación deberemos especificar la IP de la interfaz tun0 nuestro host de ataque y hacer click en "Update":![](../../../../~gitbook/image.md)Y podremos capturar la contraseña en claro: ![[Writeups/HTB/Road to OSCP/Lainkusanagi OSCP/Return/5.png]]Credenciales obtenidas:- Usuario: `svc-printer`
 - Contraseña: `1edFg43012!!`
 
-####✅ Verificación de credenciales
+#### ✅ Verificación de credenciales
 Verificamos la credencial con los servicios SMB y WinRM y verificamos que podemos autenticarnos mediante WinRM. Usamos la herramienta evil-winrm para ganar acceso al sistema usando este servicio:![](../../../../~gitbook/image.md)
-####🔌 Conexión via WinRM
+#### 🔌 Conexión via WinRM
 
-####🏁 Primera flag
+#### 🏁 Primera flag
 Capturamos la primera flag en el directorio Desktop del usuario svc-printer:
-###🔝 Escalada de privilegios
+### 🔝 Escalada de privilegios
 
-####🔍 Enumeración de privilegios
+#### 🔍 Enumeración de privilegios
 Enumeramos privilegios del usuario svc-printer:![](../../../../~gitbook/image.md)Privilegios importantes identificados:- `SeLoadDriverPrivilege`
 - `SeBackupPrivilege`
 - `SeRestorePrivilege`
 
-####👥 Análisis de membresía de grupos
+#### 👥 Análisis de membresía de grupos
 Si verificamos la información del usuario svc-printer vemos que pertenece entre otros al grupo Server Operators:![](../../../../~gitbook/image.md)💡 Nota crítica: Los miembros que pertenecen al grupo Server Operators pueden administrar controladores de dominio y pueden también detener e iniciar servicios.
-####🔧 Enumeración de servicios
+#### 🔧 Enumeración de servicios
 Echamos un vistazo a los servicios que se están ejecutando en la máquina:![](../../../../~gitbook/image.md)
-####🎯 Explotación de privilegios de servicio
+#### 🎯 Explotación de privilegios de servicio
 Plan A - Crear servicio nuevo: Podemos probar a crear un servicio propio que manejaremos a nuestro antojo para establecer una conexión reversa:Intentamos crear nuestro servicio pero obtenemos error de acceso denegado:Plan B - Modificar servicio existente: En lugar de crear un servicio nuevo, podemos intentar editar uno ya existente:¡Funciona con el servicio VMTools!![](../../../../~gitbook/image.md)
-####🚀 Ejecución del ataque
+#### 🚀 Ejecución del ataque
 - Iniciamos listener en nuestro host de ataque:
 - Detenemos el servicio:
 - Iniciamos el servicio:
 
-####👑 Obtención de acceso root
+#### 👑 Obtención de acceso root
 Recibimos la conexión reversa como usuario de altos privilegios:
-####🏆 Flag de root
-Last updated 9 months ago- [📝 Descripción](#descripcion)
+#### 🏆 Flag de root
+
 - [🎯 Resumen](#resumen)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🚪 Acceso Inicial](#acceso-inicial)

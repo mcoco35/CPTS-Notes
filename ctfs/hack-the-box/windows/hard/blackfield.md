@@ -4,7 +4,7 @@
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Hard
 OS: Windows
-###📝 Descripción
+### 📝 Descripción
 Blackfield es una máquina Windows de nivel Hard que presenta un entorno de Active Directory complejo y desafiante. Esta máquina está diseñada para poner a prueba habilidades avanzadas de pentesting en entornos empresariales Windows, incluyendo técnicas de reconocimiento de AD, explotación de privilegios específicos de Windows y escalada de privilegios mediante abuso de funcionalidades del sistema operativo.La máquina simula un controlador de dominio corporativo con múltiples servicios expuestos, incluyendo SMB, LDAP, Kerberos y WinRM. El vector de ataque inicial requiere un enfoque meticuloso de enumeración para descubrir usuarios válidos del dominio y explotar configuraciones débiles de autenticación.Objetivos de Aprendizaje:- Enumeración avanzada de servicios de Active Directory
 - Técnicas de AS-REP Roasting para obtener hashes de autenticación
 - Explotación de permisos específicos de AD (ForceChangePassword)
@@ -12,103 +12,103 @@ Blackfield es una máquina Windows de nivel Hard que presenta un entorno de Acti
 - Abuso del privilegio SeBackupPrivilege para escalada de privilegios
 - Extracción y análisis de la base de datos NTDS.dit
 
-###🎯 Información General
+### 🎯 Información General
 AtributoValorNombreBlackfieldIP10.10.10.192DificultadHardOSWindows Server 2019Puntos40Creadoradf11
-###📊 Resumen de la Explotación
+### 📊 Resumen de la Explotación
 
-####🔗 Cadena de Ataque
+#### 🔗 Cadena de Ataque
 
-####🎯 Puntos Clave
+#### 🎯 Puntos Clave
 - Vector inicial: Enumeración SMB sin autenticación
 - Técnica crítica: AS-REP Roasting para obtener primer acceso
 - Escalada lateral: Abuso de permisos AD (ForceChangePassword)
 - Análisis forense: Extracción de credenciales desde volcado LSASS
 - Escalada final: Explotación de SeBackupPrivilege para acceso total
 
-###🛠️ Herramientas Utilizadas
+### 🛠️ Herramientas Utilizadas
 HerramientaPropósitonmapReconocimiento y enumeración de puertossmbclientEnumeración de recursos SMBnetexecEnumeración de usuarios y recursosimpacketAtaques AS-REP Roasting y KerberoastingbloodhoundAnálisis de rutas de ataque en ADpypykatzAnálisis de volcados de memoria LSASSevil-winrmShell interactivo en Windows via WinRMhashcatCracking de hashes
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 ⚠️ Añadimos el siguiente vhost a nuestro fichero /etc/hosts:
-####📋 Análisis de Servicios Detectados
+#### 📋 Análisis de Servicios Detectados
 PuertoServicioDescripción53DNSServicio DNS del dominio88KerberosAutenticación del dominio135MSRPCLlamadas a procedimientos remotos389/3268LDAPDirectorio activo445SMBRecursos compartidos593RPC over HTTPLlamadas RPC via HTTP5985WinRMAdministración remota Windows🔥 Servicios críticos identificados:- SMB (445): Potencial acceso a recursos compartidos
 - LDAP (389): Información del directorio activo
 - Kerberos (88): Posibles ataques AS-REP/Kerberoasting
 - WinRM (5985): Shell remoto si obtenemos credenciales
 
-###🌐 Enumeración de Servicios
+### 🌐 Enumeración de Servicios
 
-####🗂️ SMB (Puerto 445) - Acceso Inicial
+#### 🗂️ SMB (Puerto 445) - Acceso Inicial
 Ya que no disponemos de credenciales, comenzamos tratando de enumerar posibles recursos mediante una sesión nula:📁 Enumeración de recursos compartidos![](../../../../~gitbook/image.md)👥 Enumeración de usuarios📝 Nota: Se identificaron más de 300 usuarios del dominio mediante RID brute force.Nos conectamos al recurso profiles$ y descargamos el contenido en nuestro host de ataque, pero tras revisarlo no encontramos nada de interés:![](../../../../~gitbook/image.md)
-###🎫 Ataques de Autenticación Kerberos
+### 🎫 Ataques de Autenticación Kerberos
 
-####🎯 AS-REP Roasting
+#### 🎯 AS-REP Roasting
 Verificamos si alguno de los usuarios obtenidos no tiene habilitada la pre-autenticación de kerberos y podemos realizar un ataque de tipo AS-Rep Roasting:![](../../../../~gitbook/image.md)🎉 ¡Éxito! Encontramos que la cuenta support no tiene la pre-autenticación de kerberos habilitada y logramos obtener un ticket.Alternativa usando kerbrute:![](../../../../~gitbook/image.md)
-####🔓 Cracking del Hash
+#### 🔓 Cracking del Hash
 ![](../../../../~gitbook/image.md)Procedemos a intentar crackearlo usando hashcat y rockyou.txt:![](../../../../~gitbook/image.md)🔑 Credencial obtenida: `support:#00^BlackKnight`
-####🎪 Verificación Kerberoasting
+#### 🎪 Verificación Kerberoasting
 Intentamos sin éxito un ataque de kerberoasting:
-###🩸 Análisis con BloodHound
+### 🩸 Análisis con BloodHound
 
-####📊 Recolección de Datos
+#### 📊 Recolección de Datos
 Ahora que disponemos de una cuenta unida al dominio con credenciales, usamos bloodhound-python para obtener un mapeo del dominio:Es importante realizar una configuración adicional introduciendo el nombre de la máquina y el FQDN en `/etc/hosts`:![](../../../../~gitbook/image.md)
-####🔍 Análisis de Rutas de Ataque
+#### 🔍 Análisis de Rutas de Ataque
 Al cargar los datos en bloodhound vemos que el usuario support tiene el privilegio ForceChangePassword sobre el usuario audit2020:![](../../../../~gitbook/image.md)
-###🔄 Escalada Lateral - Abuso de ForceChangePassword
+### 🔄 Escalada Lateral - Abuso de ForceChangePassword
 
-####💡 Explotación del Privilegio
+#### 💡 Explotación del Privilegio
 Primero intentamos usar bloodyAD, pero falla debido a restricciones LDAP:Error: `LDAPBindException: LDAP Bind failed! Result code: "invalidCredentials"`
-####🛠️ Métodos Alternativos
+#### 🛠️ Métodos Alternativos
 Método 1: Comando `net`Método 2: Comando `rpcclient`![](../../../../~gitbook/image.md)
-####📂 Acceso al Recurso Forensic
+#### 📂 Acceso al Recurso Forensic
 Una vez cambiada la contraseña, verificamos acceso a recursos compartidos:![](../../../../~gitbook/image.md)🎯 ¡Acceso obtenido! Tenemos permisos de lectura sobre el recurso forensic.
-###🕵️ Análisis Forense
+### 🕵️ Análisis Forense
 
-####📥 Descarga de Archivos
+#### 📥 Descarga de Archivos
 Nos conectamos al recurso forensic y descargamos el contenido:![](../../../../~gitbook/image.md)
-####🗂️ Estructura de Archivos Encontrados
+#### 🗂️ Estructura de Archivos Encontrados
 - commands_output: Volcados de comandos ejecutados en la máquina
 - memory_analysis: Archivos comprimidos con volcados de memoria
 - tools: Herramientas como sysinternals y volatility
 
-####🧠 Análisis del Volcado LSASS
+#### 🧠 Análisis del Volcado LSASS
 El archivo más crítico encontrado es `lsass.zip`:🔧 Uso de pypykatzInstalamos y usamos pypykatz para analizar el volcado:![](../../../../~gitbook/image.md)
-####🔑 Extracción de Hashes
+#### 🔑 Extracción de Hashes
 UsuarioHash NTEstadosvc_backup9658d1d1dcd9250115e2205d9f48400d✅ VálidoDC01$b624dc83a27cc29da11d9bf25efea796❌ InválidoAdministrator7f1e4ff8c6a8e6b6fcae2d9c0572cd62❌ Inválido
-###💻 Acceso Inicial al Sistema
+### 💻 Acceso Inicial al Sistema
 
-####🏃 Conexión WinRM
+#### 🏃 Conexión WinRM
 Utilizamos el hash válido de svc_backup para conectarnos:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🏁 Primera Flag
+#### 🏁 Primera Flag
 
-####📋 Enumeración de Privilegios
+#### 📋 Enumeración de Privilegios
 ![](../../../../~gitbook/image.md)En el directorio `C:\` encontramos un archivo `notes.txt` con información adicional.![](../../../../~gitbook/image.md)Información crítica identificada:- ✅ Pertenece al grupo Backup Operators
 - ✅ Tiene el privilegio SeBackupPrivilege habilitado
 
-###🎁 Escalada de Privilegios - Abuso de SeBackupPrivilege
+### 🎁 Escalada de Privilegios - Abuso de SeBackupPrivilege
 
-####💡 Concepto del Ataque
+#### 💡 Concepto del Ataque
 El privilegio `SeBackupPrivilege` permite realizar copias de seguridad de archivos críticos del sistema:- `SYSTEM` (Clave de registro del sistema)
 - `SAM` (Security Account Manager)
 - `NTDS.dit` (Base de datos de Active Directory)
 
-####📋 Preparación del Entorno
+#### 📋 Preparación del Entorno
 Paso 1: Crear script VSS para montar copia de volumen:Paso 2: Descargar DLLs necesarias:Paso 3: Transferir archivos al host víctima:
-####💾 Extracción de la Base de Datos NTDS
+#### 💾 Extracción de la Base de Datos NTDS
 Paso 4: Ejecutar script VSS:Paso 5: Extraer archivos críticos:
-####🔓 Extracción de Todos los Hashes
+#### 🔓 Extracción de Todos los Hashes
 Descargamos los archivos críticos a nuestro host atacante:Utilizamos `impacket-secretsdump` para extraer todos los hashes del dominio:![](../../../../~gitbook/image.md)
-###👑 Acceso como Administrator
+### 👑 Acceso como Administrator
 
-####🔥 Pass-the-Hash Final
+#### 🔥 Pass-the-Hash Final
 Con el hash NT del Administrator extraído, realizamos el ataque final:
-####🏆 Flag Final
-Last updated 9 months ago- [📝 Descripción](#descripcion)
+#### 🏆 Flag Final
+
 - [🎯 Información General](#informacion-general)
 - [📊 Resumen de la Explotación](#resumen-de-la-explotacion)
 - [🛠️ Herramientas Utilizadas](#herramientas-utilizadas)

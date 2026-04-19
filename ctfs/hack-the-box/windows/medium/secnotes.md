@@ -3,52 +3,52 @@
 ![](../../../../~gitbook/image.md)Publicado: 16 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 SecNotes es una máquina Windows de dificultad Easy de HackTheBox que presenta una aplicación web de notas seguras vulnerable a ataques CSRF. La explotación involucra el secuestro de cuentas de usuario, acceso a recursos compartidos SMB, ejecución de código remoto a través de IIS, y escalada de privilegios mediante el subsistema Windows Subsystem for Linux (WSL). Esta máquina es excelente para practicar técnicas de web hacking, enumeración de servicios Windows y escalada de privilegios en entornos híbridos Windows/Linux.Puntos clave de aprendizaje:- 🎯 Explotación de vulnerabilidades CSRF en aplicaciones web
 - 🔑 Enumeración y explotación de servicios SMB
 - 🌐 Subida de webshells y ejecución remota de comandos en IIS
 - 🐧 Escalada de privilegios através de WSL (Windows Subsystem for Linux)
 - 🔍 Análisis de historial de comandos para obtención de credenciales
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🔍 Escaneo de puertos
+#### 🔍 Escaneo de puertos
 
-####🛠️ Enumeración de servicios
+#### 🛠️ Enumeración de servicios
 
-###🎯 Enumeración de Servicios
+### 🎯 Enumeración de Servicios
 
-####🌐 HTTP (Puerto 80) - Aplicación de Notas Seguras
+#### 🌐 HTTP (Puerto 80) - Aplicación de Notas Seguras
 Encontramos un panel de login de lo que parece ser una aplicación de notas seguras. Además hay una opción de registro.URL: [http://10.10.10.97/login.php](http://10.10.10.97/login.php)![](../../../../~gitbook/image.md)Al registrarnos tenemos acceso a una serie de opciones![](../../../../~gitbook/image.md)
-####👤 Enumeración de usuarios
+#### 👤 Enumeración de usuarios
 Hay un banner en el que podemos enumerar un usuario llamado tyler. También aparece en la sección de contacto.![](../../../../~gitbook/image.md)🔨 Fuzzing de directoriosEl fuzzing de directorios no revela ningún otro recurso que añadir a nuestro scope como posible vía potencial de ataque.
-###🚨 Explotación Web - Ataque CSRF
+### 🚨 Explotación Web - Ataque CSRF
 
-####🎯 Identificación de la vulnerabilidad
+#### 🎯 Identificación de la vulnerabilidad
 Después de probar algunas cosas encuentro que puedo realizar un CSRF en la función `Contact Us`. Esta funcionalidad permite enviar mensajes a otros usuarios de la aplicación.![](../../../../~gitbook/image.md)
-####💣 Ejecución del CSRF
+#### 💣 Ejecución del CSRF
 Trato de aprovecharme de esto cambiando la clave de tyler. Cambiaré la petición `POST` de la función `Change Password` a una `GET`, para que pueda cambiar la clave de Tyler por otra cuando visite mi enlace malicioso.![](../../../../~gitbook/image.md)Ahora puedo autenticarme como tyler:![](../../../../~gitbook/image.md)Al revisar sus notas encuentro lo que parece ser un recurso compartido y una contraseña:![](../../../../~gitbook/image.md)Credenciales encontradas:
-###🗂️ Explotación SMB
+### 🗂️ Explotación SMB
 
-####🔐 Validación de credenciales
+#### 🔐 Validación de credenciales
 Decido probar estas credenciales con el servicio SMB usando la herramienta netexec y confirmo que son válidas:📁 Enumeración de recursos compartidos![](../../../../~gitbook/image.md)🔍 Exploración del recurso new-siteEnumeramos el recurso `new-site`, que lo único que parece contener en la web en construcción del sitio IIS que hay en el puerto 8808Sin embargo, lo más interesante aquí, es que tyler tiene tiene permisos de lectura y escritura sobre este recurso.![](../../../../~gitbook/image.md)
-####🚀 Acceso Inicial al Sistema
+#### 🚀 Acceso Inicial al Sistema
 ❌ Intento fallido con psexecPrimero intentamos sin éxito ganar acceso usando impacket-psexec:
-####🕷️ Webshell a través de IIS
+#### 🕷️ Webshell a través de IIS
 Así que optamos por la opción de intentar subir un archivo malicioso al directorio new-site que puede ser interpretado por el servidor IIS.Me creo una webshell en php básica:A continuación la subo al servidor SMB:![](../../../../~gitbook/image.md)Y confirmamos la ejecución remota de comandos![](../../../../~gitbook/image.md)Podríamos aprovechar esto para subir también la herramienta nc.exe al recureso smb /new-site y usarlo para establecer conexión con nuestro host de ataque![](../../../../~gitbook/image.md)Ganamos acceso al sistema y obtenemos la primera flag:
-###🔝 Escalada de Privilegios
+### 🔝 Escalada de Privilegios
 Tras un rato enumerando la máquina buscando algúna potencial vía de escalada de privilegios, decido subir Winpeas.exe para ver qué encuentra y veo algo interesante:![](../../../../~gitbook/image.md)
-####🐧 Descubrimiento de WSL
+#### 🐧 Descubrimiento de WSL
 
-####🔗 Análisis del enlace bash.lnk
+#### 🔗 Análisis del enlace bash.lnk
 Si revisamos el contenido de bash.lnk podremos ver que se está referenciando la ruta del binario de bash que ha encontrado Winpeas![](../../../../~gitbook/image.md)
-####🚪 Acceso al subsistema Linux
+#### 🚪 Acceso al subsistema Linux
 Al ejecutar el binario de bash comprobamos que accedemos a este subsistema Linux como root:![](../../../../~gitbook/image.md)
-####🔍 Búsqueda de credenciales en historial
+#### 🔍 Búsqueda de credenciales en historial
 Tras explorar el subsistema Linux y mejorar la TTY con Python, encuentro credenciales en el archivo `.bash_history` de root:
-####🔑 Credenciales de Administrator
+#### 🔑 Credenciales de Administrator
 Credenciales encontradas:Ahora simplemente usamos netexec para validar esta credencial contra el servicio SMB:Ganamos acceso al sistema usando impacket-psexec y ya podemos obtener la flag root.txt:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🎯 Enumeración de Servicios](#enumeracion-de-servicios-1)

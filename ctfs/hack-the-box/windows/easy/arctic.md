@@ -3,42 +3,42 @@
 ![](../../../../~gitbook/image.md)Publicado: 15 de Junio de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 Arctic es una máquina Windows de nivel fácil de HackTheBox que ejecuta Adobe ColdFusion 8, un servidor de aplicaciones web vulnerable. La explotación inicial se realiza aprovechando una vulnerabilidad de ejecución remota de código (RCE) en ColdFusion 8, que nos permite obtener acceso como usuario de bajo privilegio. La escalada de privilegios se logra mediante el exploit JuicyPotato, aprovechando el privilegio SeImpersonatePrivilege en Windows Server 2008.Puntos clave de aprendizaje:- Enumeración de servicios web no estándar
 - Explotación de Adobe ColdFusion 8 RCE
 - Escalada de privilegios con JuicyPotato
 - Uso del privilegio SeImpersonatePrivilege
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####🏓 Ping para verificación en base a TTL
+#### 🏓 Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 128 sugiere que probablemente sea una máquina Windows.
-####🚀 Escaneo de puertos
+#### 🚀 Escaneo de puertos
 
-####🔍 Enumeración de servicios
+#### 🔍 Enumeración de servicios
 Puertos identificados:- 135/tcp: Microsoft Windows RPC
 - 8500/tcp: Servicio desconocido (fmtp?)
 - 49154/tcp: Microsoft Windows RPC
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####🔥 Puerto 8500 - Adobe ColdFusion
+#### 🔥 Puerto 8500 - Adobe ColdFusion
 La enumeración con nmap no deja claro qué tipo de servicio es, pero al acceder a él como si de un servicio http se tratase vemos que lo carga correctamente aunque con bastante lentitudy vemos lo siguiente![](../../../../~gitbook/image.md)Al ingresar al directorio CFIDE vemos el siguiente árbol de directorios![](../../../../~gitbook/image.md)
-####🔐 Panel de administración ColdFusion
+#### 🔐 Panel de administración ColdFusion
 Al acceder a "administrator" vemos que somos redirigidos a un panel de login de un servicio de Adobe ColdFusion 8: `http://10.10.10.11:8500/CFIDE/administrator/`http://10.10.10.11:8500/CFIDE/administrator/![](../../../../~gitbook/image.md)Las credenciales por defecto no parecen funcionar. Pero buscando exploits públicos para la versión de este servicio encontramos un exploit en python que permite explotar una RCE:
-###💥 Explotación
+### 💥 Explotación
 
-####🎯 Búsqueda de exploits
+#### 🎯 Búsqueda de exploits
 ![](../../../../~gitbook/image.md)
-####🚀 Configuración del exploit
+#### 🚀 Configuración del exploit
 Una vez descargado el exploit deberemos definir los parámetros correspondientes al host que contiene el servicio vulnerable así como la ip y el puerto de nuestro host de ataque donde recibiremos la reverse shell:![](../../../../~gitbook/image.md)![](../../../../~gitbook/image.md)
-####🎉 Acceso inicial
+#### 🎉 Acceso inicial
 Ganamos acceso al host remoto como usuario tolis:![](../../../../~gitbook/image.md)
-###⬆️ Escalada de privilegios
+### ⬆️ Escalada de privilegios
 Al enumerar los privilegios del usuario Solis vemos que tiene el privilegio SeImpersonatePrivilege habilitado:![](../../../../~gitbook/image.md)
-####🥔 JuicyPotato Exploit
+#### 🥔 JuicyPotato Exploit
 Dado que se trata de un Windows Server 2008 podemos usar JuicyPotato para escalar privilegios como NT System:![](../../../../~gitbook/image.md)Descargamos y transferimos netcat y el exploit de JuicyPotato a la máquina Windows ServerIniciamos un listener en nuestro host de ataque:
-####🚀 Ejecución del exploit
+#### 🚀 Ejecución del exploit
 Ejecutamos el exploit JuicyPotato usando netcat para establecer una reverse shell con nuestro host de ataque:![](../../../../~gitbook/image.md)Recibimos inmediatamente la reverse shell en nuestro host de ataque como NT System y obtenemos la flag:![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🔭 Reconocimiento](#reconocimiento)
 - [🌐 Enumeración Web](#enumeracion-web)

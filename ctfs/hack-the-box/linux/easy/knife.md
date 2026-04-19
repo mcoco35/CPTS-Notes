@@ -3,33 +3,33 @@
 ![](../../../../~gitbook/image.md)Publicado: 13 de Mayo de 2025
 Autor: José Miguel Romero aKa x3m1Sec
 Dificultad: ⭐ Easy
-###📝 Descripción
+### 📝 Descripción
 La máquina "Knife" es un sistema Linux vulnerable que ejecuta un servidor web Apache con PHP 8.1.0-dev. Esta versión específica de PHP contiene un backdoor que permite la ejecución remota de comandos mediante la manipulación de la cabecera HTTP "User-Agentt". La explotación inicial permite obtener acceso como el usuario "james", quien tiene privilegios para ejecutar el binario "knife" como root sin contraseña, lo que permite una fácil escalada de privilegios al sistema.
-###🚀 Metodología
+### 🚀 Metodología
 
-###🔭 Reconocimiento
+### 🔭 Reconocimiento
 
-####Ping para verificación en base a TTL
+#### Ping para verificación en base a TTL
 💡 Nota: El TTL cercano a 64 sugiere que probablemente sea una máquina Linux.
-####Escaneo de puertos
+#### Escaneo de puertos
 
-####Enumeración de servicios
+#### Enumeración de servicios
 
-###🌐 Enumeración Web
+### 🌐 Enumeración Web
 
-####80 HTTP (Apache httpd 2.4.41)
+#### 80 HTTP (Apache httpd 2.4.41)
 ![](../../../../~gitbook/image.md)Tras enumerar la página, no se ve a priori gran cosa que se pueda hacer en ella.🕷️Fuzzing de directoriosTras probar a realizar fuzzing de directorios con gobuster y feroxbuster tampoco logramos añadir ningún nuevo recurso a nuestro scope:
-####Enumerando tecnologías con wappalyzer
+#### Enumerando tecnologías con wappalyzer
 Al enumerar las tecnologías empleadas en el sitio web, sí que llama algo la atención, la versión de PHP que está usando el sitio web podría backdorizable:![](../../../../~gitbook/image.md)
-###💻 Explotación (Opción A usando exploit)
+### 💻 Explotación (Opción A usando exploit)
 Una versión temprana de PHP, la versión PHP 8.1.0-dev fue lanzada con una puerta trasera el 28 de marzo de 2021, pero la puerta trasera fue rápidamente descubierta y eliminada. Si esta versión de PHP se ejecuta en un servidor, un atacante puede ejecutar código arbitrario mediante el envío de la cabecera User-Agentt.
 El siguiente exploit utiliza el backdoor para proporcionar un pseudo shell ont el host.
 Y existen algunos exploits para esta vulnerabilidad:https://www.exploit-db.com/exploits/49933A continuación lo ejecutamos de la siguiente forma para obtener una shell interactiva con el host remoto:Un mensaje de error no indica que no se ha podido cargar la tty por lo que tenemos una consola un poco limitada.
-###💻 Explotación (Opción B usando reverse shell y curl)
+### 💻 Explotación (Opción B usando reverse shell y curl)
 Generamos una bash reverse shell que codificaremos en base64Posteriormente, dado que problema de esta versión es que se publicó con una puerta trasera (backdoor). Si se pone la cabecera `User-Agentt: zerodiumsystem("codigo reverseshell");` obtendremos acceso remoto al host
-####Mejora de la shell
+#### Mejora de la shell
 En nuestro host de ataqueEn el host comprometido
-####👑 Escalada de privilegios
+#### 👑 Escalada de privilegios
 Verificamos si james puede ejecutar algún binario como root:Encontramos información sobre este binario y las posibles opciones para llevar a cabo la escalada de privilegios debido a una missconfiguration:
 https://gtfobins.github.io/gtfobins/knife/![](../../../../~gitbook/image.md)Last updated 10 months ago- [📝 Descripción](#descripcion)
 - [🚀 Metodología](#metodologia)
@@ -89,7 +89,7 @@ feroxbuster -u http://10.10.10.242 -r  -w /usr/share/seclists/Discovery/Web-Cont
 ```
 
 ```
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 import os
 import re
 import requests
