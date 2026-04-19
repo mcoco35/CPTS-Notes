@@ -1,0 +1,6 @@
+scrape_gitbook.py
+cleanup_notes.py
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

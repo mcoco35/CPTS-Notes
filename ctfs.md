@@ -1,0 +1,36 @@
+# CTFs
+
+This section contains my personal collection of CTF writeups, organized by platform. CTFs are cybersecurity competitions that help develop and test penetration testing skills in a controlled environment.
+##What are CTFs?
+Capture The Flag (CTF) competitions are cybersecurity challenges where participants solve security puzzles by exploiting vulnerabilities in systems, applications, or files to obtain a "flag" - usually a specific string of text that proves successful completion.
+##Platforms Covered
+
+###🟩 Hack The Box
+Industry-leading cybersecurity training platform with various machines and challenges ranging from beginner to expert difficulty.
+###🔴 TryHackMe
+Security training platform with guided "rooms" designed to teach specific cybersecurity concepts and techniques.
+##Benefits of CTFs
+- Practical application of offensive security techniques
+- Learning to think like an attacker
+- Exposure to various technologies and vulnerability types
+- Development of problem-solving skills
+- Documentation practice through writeups
+
+##How to Use These Writeups
+These writeups serve as:- Personal reference for techniques and approaches
+- Knowledge sharing with the security community
+- Documentation of my learning journey
+Note: If you're attempting these challenges yourself, I recommend trying to solve them independently before consulting these writeups.
+##Methodology
+In general, my approach to CTFs follows this methodology:- Reconnaissance - Information gathering
+- Enumeration - Finding potential entry points
+- Exploitation - Leveraging vulnerabilities
+- Privilege Escalation - Gaining higher permissions
+- Post-Exploitation - Finding flags and documenting findings
+Happy hacking!Last updated 11 months ago- [What are CTFs?](#what-are-ctfs)
+- [Platforms Covered](#platforms-covered)
+- [🟩 Hack The Box](#hack-the-box)
+- [🔴 TryHackMe](#tryhackme)
+- [Benefits of CTFs](#benefits-of-ctfs)
+- [How to Use These Writeups](#how-to-use-these-writeups)
+- [Methodology](#methodology)
